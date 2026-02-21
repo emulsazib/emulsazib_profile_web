@@ -723,22 +723,136 @@ main {
   font-style: italic;
 }
 
+/* ── Nav right wrapper ── */
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* ── 3-dot menu toggle (hidden on desktop) ── */
+.menu-toggle {
+  display: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex-direction: row;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.menu-toggle:hover {
+  border-color: var(--accent);
+}
+
+.menu-toggle__dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--muted);
+  transition: background 0.2s ease;
+}
+
+.menu-toggle:hover .menu-toggle__dot {
+  background: var(--accent-strong);
+}
+
+/* ── Mobile nav overlay ── */
+.nav-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  z-index: 99;
+}
+
+.nav-overlay.open {
+  display: block;
+}
+
+/* ── Mobile dropdown (appended to body by JS) ── */
+.mobile-dropdown {
+  display: none;
+  position: fixed;
+  left: 1rem;
+  right: 1rem;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--bg-alt);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.15);
+  z-index: 200;
+}
+
+body[data-theme='dark'] .mobile-dropdown {
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+}
+
+.mobile-dropdown.open {
+  display: flex;
+  animation: menuSlideDown 0.2s ease;
+}
+
+@keyframes menuSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.mobile-dropdown .ghost-btn {
+  width: 100%;
+  text-align: left;
+  padding: 0.65rem 1rem;
+  border-radius: 12px;
+  font-size: 0.95rem;
+}
+
+.mobile-dropdown .ghost-btn:hover,
+.mobile-dropdown .ghost-btn.active {
+  background: rgba(249, 115, 22, 0.1);
+}
+
+.mobile-dropdown .theme-toggle {
+  align-self: center;
+  margin-top: 0.25rem;
+}
+
 @media (max-width: 640px) {
   body {
     padding: 1rem;
   }
 
-  .nav {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .panel,
   .site-header {
+    z-index: 10;
     padding: 1.5rem;
   }
 
+  .nav {
+    border-radius: 16px;
+    padding: 0.75rem 1rem;
+  }
+
+  .menu-toggle {
+    display: flex;
+  }
+
+  .nav-actions {
+    display: none !important;
+  }
+
   .panel {
+    padding: 1.5rem;
     border-radius: 24px;
   }
 

@@ -17,9 +17,9 @@ init();
 function init() {
   if (YEAR) YEAR.textContent = new Date().getFullYear();
   initTheme();
+  initMobileMenu();
   wireNavigation();
   highlightActiveNav();
-  // Only hydrate API data if on home page
   if (window.location.pathname === '/' || window.location.pathname === '/index.html') {
     hydrateFromApi();
     initForm();
@@ -44,6 +44,77 @@ function initTheme() {
 
 function setTheme(theme) {
   body.dataset.theme = theme;
+}
+
+function initMobileMenu() {
+  const menuToggle = document.getElementById('menu-toggle');
+  const navActions = document.getElementById('nav-actions');
+  const nav = document.querySelector('.nav');
+  if (!menuToggle || !navActions || !nav) return;
+
+  let overlay = document.querySelector('.nav-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.className = 'nav-overlay';
+    document.body.appendChild(overlay);
+  }
+
+  // Clone nav links into body so backdrop-filter on .nav doesn't trap fixed positioning
+  let mobileMenu = document.getElementById('mobile-menu');
+  if (!mobileMenu) {
+    mobileMenu = navActions.cloneNode(true);
+    mobileMenu.id = 'mobile-menu';
+    mobileMenu.className = 'mobile-dropdown';
+    document.body.appendChild(mobileMenu);
+  }
+
+  function positionDropdown() {
+    const rect = nav.getBoundingClientRect();
+    mobileMenu.style.top = (rect.bottom + 8) + 'px';
+  }
+
+  function toggle() {
+    const isOpen = mobileMenu.classList.toggle('open');
+    overlay.classList.toggle('open', isOpen);
+    menuToggle.setAttribute('aria-label', isOpen ? 'Close menu' : 'Open menu');
+    if (isOpen) positionDropdown();
+  }
+
+  function close() {
+    mobileMenu.classList.remove('open');
+    overlay.classList.remove('open');
+    menuToggle.setAttribute('aria-label', 'Open menu');
+  }
+
+  menuToggle.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggle();
+  });
+
+  overlay.addEventListener('click', close);
+
+  mobileMenu.querySelectorAll('.ghost-btn').forEach((link) => {
+    link.addEventListener('click', close);
+  });
+
+  // Theme toggle in mobile menu
+  const mobileThemeToggle = mobileMenu.querySelector('.theme-toggle');
+  if (mobileThemeToggle) {
+    mobileThemeToggle.removeAttribute('id');
+    mobileThemeToggle.addEventListener('click', () => {
+      const nextTheme = body.dataset.theme === 'dark' ? 'light' : 'dark';
+      setTheme(nextTheme);
+      localStorage.setItem(STORAGE_KEY, nextTheme);
+    });
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') close();
+  });
+
+  window.addEventListener('resize', () => {
+    if (window.innerWidth > 640) close();
+  });
 }
 
 function wireNavigation() {
@@ -96,7 +167,7 @@ function renderProjects(list) {
 
   projectsGrid.innerHTML = list
     .map(
-      ({ title, description, stack, link }) => `
+      ({ title, description, stack, link, github }) => `
         <article class="project-card">
           <div>
             <p class="eyebrow">${stack[0] || 'Project'}</p>
@@ -106,7 +177,10 @@ function renderProjects(list) {
           <ul>
             ${stack.map((tech) => `<li>${tech}</li>`).join('')}
           </ul>
-          <a href="${link}" target="_blank" rel="noreferrer">View details →</a>
+          <div style="display: flex; gap: 1rem; margin-top: 0.5rem;">
+            ${link ? `<a href="${link}" target="_blank" rel="noreferrer">View details →</a>` : ''}
+            ${github ? `<a href="${github}" target="_blank" rel="noreferrer">GitHub Repo →</a>` : ''}
+          </div>
         </article>
       `,
     )
@@ -140,7 +214,7 @@ function renderErrorState() {
 
 function highlightActiveNav() {
   const currentPath = window.location.pathname;
-  const navLinks = document.querySelectorAll('.nav-actions .ghost-btn');
+  const navLinks = document.querySelectorAll('.nav-actions .ghost-btn, .mobile-dropdown .ghost-btn');
   
   navLinks.forEach((link) => {
     link.classList.remove('active');

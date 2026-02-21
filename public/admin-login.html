@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Admin login for portfolio management." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="/styles/main.css" />
+  <link rel="stylesheet" href="/styles/admin.css" />
+  <title>Admin Login - Portfolio</title>
+</head>
+
+<body>
+  <div class="noise"></div>
+  <header class="site-header">
+    <nav class="nav">
+      <div class="brand">
+        <span class="dot"></span>
+        <div>
+          <p class="eyebrow">Portfolio</p>
+          <p class="name">Admin</p>
+        </div>
+      </div>
+      <div class="nav-actions">
+        <a href="/" class="ghost-btn">Back to Site</a>
+        <button id="theme-toggle" class="theme-toggle" aria-label="Toggle color theme">
+          <span class="theme-toggle__icon">🌞</span>
+          <span class="theme-toggle__icon">🌙</span>
+        </button>
+      </div>
+    </nav>
+  </header>
+
+  <main class="login-main">
+    <div class="login-card panel">
+      <div class="login-card__header">
+        <div class="login-card__icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+        </div>
+        <h1>Welcome Back</h1>
+        <p class="lede">Sign in to access the admin dashboard.</p>
+      </div>
+      <form class="login-form" id="login-form" novalidate>
+        <label>
+          Username
+          <input type="text" name="username" id="input-username" placeholder="Enter your username" autocomplete="username" required autofocus />
+        </label>
+        <label>
+          Password
+          <div class="password-wrap">
+            <input type="password" name="password" id="input-password" placeholder="Enter your password" autocomplete="current-password" required />
+            <button type="button" class="password-toggle" id="toggle-password" aria-label="Show password">
+              <svg class="eye-open" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+              <svg class="eye-closed" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                <line x1="1" y1="1" x2="23" y2="23"/>
+              </svg>
+            </button>
+          </div>
+        </label>
+        <p class="login-error" id="login-error" hidden></p>
+        <button class="primary-btn login-btn" type="submit" id="login-submit">
+          <span class="login-btn__text">Sign In</span>
+          <span class="login-btn__loader" hidden></span>
+        </button>
+      </form>
+    </div>
+  </main>
+
+  <!-- Toast -->
+  <div class="toast" id="toast" hidden></div>
+
+  <footer class="site-footer">
+    <p>© <span id="year"></span> Portfolio · Secure Admin Access</p>
+  </footer>
+
+  <script src="/scripts/login.js"></script>
+</body>
+
+</html>

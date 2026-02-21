@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Admin panel for managing portfolio content." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="/styles/main.css" />
+  <link rel="stylesheet" href="/styles/admin.css" />
+  <title>Admin Panel - Portfolio</title>
+</head>
+
+<body>
+  <div class="noise"></div>
+  <header class="site-header">
+    <nav class="nav">
+      <div class="brand">
+        <span class="dot"></span>
+        <div>
+          <p class="eyebrow">Admin</p>
+          <p class="name">Dashboard</p>
+        </div>
+      </div>
+      <div class="nav-actions">
+        <a href="/" class="ghost-btn">View Site</a>
+        <button id="theme-toggle" class="theme-toggle" aria-label="Toggle color theme">
+          <span class="theme-toggle__icon">🌞</span>
+          <span class="theme-toggle__icon">🌙</span>
+        </button>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <!-- Stats Overview -->
+    <section class="panel panel--accent">
+      <div class="panel__badge">Overview</div>
+      <div class="admin-stats" id="admin-stats">
+        <div class="stat-card">
+          <span class="stat-card__number" id="stat-projects">0</span>
+          <span class="stat-card__label">Projects</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-card__number" id="stat-achievements">0</span>
+          <span class="stat-card__label">Achievements</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-card__number" id="stat-blog">0</span>
+          <span class="stat-card__label">Blog Posts</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab Navigation -->
+    <div class="admin-tabs">
+      <button class="admin-tab active" data-tab="projects">Projects</button>
+      <button class="admin-tab" data-tab="achievements">Achievements</button>
+      <button class="admin-tab" data-tab="blog">Blog Posts</button>
+    </div>
+
+    <!-- Projects Section -->
+    <section class="panel admin-section" id="section-projects">
+      <div class="admin-section__header">
+        <div>
+          <h2>Projects</h2>
+          <p class="lede">Manage your portfolio projects.</p>
+        </div>
+        <button class="primary-btn" id="btn-add-project">+ Add Project</button>
+      </div>
+      <div class="admin-table-wrap">
+        <table class="admin-table" id="table-projects">
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th class="hide-mobile">Stack</th>
+              <th class="hide-mobile">Description</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="admin-empty" id="empty-projects" hidden>No projects yet. Click "Add Project" to create one.</p>
+    </section>
+
+    <!-- Achievements Section -->
+    <section class="panel admin-section" id="section-achievements" hidden>
+      <div class="admin-section__header">
+        <div>
+          <h2>Achievements</h2>
+          <p class="lede">Manage your milestones and awards.</p>
+        </div>
+        <button class="primary-btn" id="btn-add-achievement">+ Add Achievement</button>
+      </div>
+      <div class="admin-table-wrap">
+        <table class="admin-table" id="table-achievements">
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th class="hide-mobile">Date</th>
+              <th class="hide-mobile">Description</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="admin-empty" id="empty-achievements" hidden>No achievements yet. Click "Add Achievement" to create one.</p>
+    </section>
+
+    <!-- Blog Section -->
+    <section class="panel admin-section" id="section-blog" hidden>
+      <div class="admin-section__header">
+        <div>
+          <h2>Blog Posts</h2>
+          <p class="lede">Write and manage your articles.</p>
+        </div>
+        <button class="primary-btn" id="btn-add-blog">+ Add Post</button>
+      </div>
+      <div class="admin-table-wrap">
+        <table class="admin-table" id="table-blog">
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th class="hide-mobile">Author</th>
+              <th class="hide-mobile">Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="admin-empty" id="empty-blog" hidden>No blog posts yet. Click "Add Post" to create one.</p>
+    </section>
+  </main>
+
+  <!-- Modal -->
+  <div class="modal-backdrop" id="modal-backdrop" hidden>
+    <div class="modal" id="modal">
+      <div class="modal__header">
+        <h3 id="modal-title">Add Item</h3>
+        <button class="modal__close" id="modal-close">&times;</button>
+      </div>
+      <form class="modal__form" id="modal-form">
+        <div id="modal-fields"></div>
+        <div class="modal__actions">
+          <button type="button" class="secondary-btn" id="modal-cancel">Cancel</button>
+          <button type="submit" class="primary-btn" id="modal-submit">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation -->
+  <div class="modal-backdrop" id="delete-backdrop" hidden>
+    <div class="modal modal--sm">
+      <div class="modal__header">
+        <h3>Confirm Delete</h3>
+        <button class="modal__close" id="delete-close">&times;</button>
+      </div>
+      <p style="padding: 1rem 1.5rem; color: var(--muted);">Are you sure you want to delete this item? This action cannot be undone.</p>
+      <div class="modal__actions" style="padding: 0 1.5rem 1.5rem;">
+        <button class="secondary-btn" id="delete-cancel">Cancel</button>
+        <button class="primary-btn danger-btn" id="delete-confirm">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast" hidden></div>
+
+  <footer class="site-footer">
+    <p>© <span id="year"></span> Portfolio Admin · Express + MongoDB</p>
+    <div class="footer-actions">
+      <a href="/" class="ghost-btn">Back to Site</a>
+    </div>
+  </footer>
+
+  <script src="/scripts/admin.js"></script>
+</body>
+
+</html>

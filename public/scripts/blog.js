@@ -19,17 +19,17 @@ function renderBlogPosts(posts) {
 
   blogGrid.innerHTML = posts
     .map(
-      ({ id, title, excerpt, author, date, tags }) => `
-        <a href="/blog-post?id=${id}" class="blog-card">
+      (post) => `
+        <a href="/blog-post?id=${post._id}" class="blog-card">
           <div class="blog-card__meta">
-            <time>${date}</time>
-            <span>${author}</span>
+            <time>${post.date}</time>
+            <span>${post.author}</span>
           </div>
-          <h3>${title}</h3>
-          <p class="blog-card__excerpt">${excerpt}</p>
-          ${tags && tags.length ? `
+          <h3>${post.title}</h3>
+          <p class="blog-card__excerpt">${post.excerpt}</p>
+          ${post.tags && post.tags.length ? `
             <div class="blog-card__tags">
-              ${tags.map((tag) => `<span class="blog-card__tag">${tag}</span>`).join('')}
+              ${post.tags.map((tag) => `<span class="blog-card__tag">${tag}</span>`).join('')}
             </div>
           ` : ''}
         </a>
