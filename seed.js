@@ -1,9 +1,9 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
-const Project = require('./models/Project');
-const Achievement = require('./models/Achievement');
-const BlogPost = require('./models/BlogPost');
-const Admin = require('./models/Admin');
+const Project = require('./backend/models/Project');
+const Achievement = require('./backend/models/Achievement');
+const BlogPost = require('./backend/models/BlogPost');
+const Admin = require('./backend/models/Admin');
 
 const projects = [
   {
