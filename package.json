@@ -6,6 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
+    "migrate": "node scripts/migrate.js",
+    "vercel-build": "node scripts/migrate.js",
     "seed": "node seed.js",
     "create-admin": "node scripts/create-admin.js"
   },

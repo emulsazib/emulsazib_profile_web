@@ -1,7 +1,6 @@
 require('dotenv').config();
-const fs = require('fs');
-const path = require('path');
 const { pool, query } = require('./backend/config/db');
+const { runMigrations } = require('./backend/db/migrate');
 const Admin = require('./backend/models/Admin');
 
 // Curated from https://github.com/emulsazib. Descriptions were inferred from the
@@ -195,10 +194,8 @@ By leveraging modern CSS techniques, you can create stunning UIs that are both b
 
 async function seed() {
   try {
-    // Create tables if they don't exist (idempotent).
-    const schema = fs.readFileSync(path.join(__dirname, 'backend', 'db', 'schema.sql'), 'utf8');
-    await query(schema);
-    console.log('Ensured tables exist');
+    // Ensure the schema is up to date (idempotent).
+    await runMigrations();
 
     await query('TRUNCATE projects, achievements, blog_posts RESTART IDENTITY');
     console.log('Cleared existing data');

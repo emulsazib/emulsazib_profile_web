@@ -15,10 +15,9 @@
 // it doubles as a password-reset tool. It never touches your other data.
 
 require('dotenv').config();
-const fs = require('fs');
-const path = require('path');
 const bcrypt = require('bcryptjs');
 const { pool, query } = require('../backend/config/db');
+const { runMigrations } = require('../backend/db/migrate');
 
 async function main() {
   const email = process.env.ADMIN_EMAIL ? process.env.ADMIN_EMAIL.toLowerCase().trim() : null;
@@ -36,9 +35,8 @@ async function main() {
     process.exit(1);
   }
 
-  // Make sure the tables exist even if this runs before the seed.
-  const schema = fs.readFileSync(path.join(__dirname, '..', 'backend', 'db', 'schema.sql'), 'utf8');
-  await query(schema);
+  // Make sure the schema exists even if this runs before any deploy/seed.
+  await runMigrations();
 
   const hash = await bcrypt.hash(password, 12);
   const { rows } = await query(

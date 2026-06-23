@@ -1,4 +1,6 @@
--- Schema for the portfolio app (PostgreSQL).
+-- 001_init: base schema.
+-- IF NOT EXISTS keeps this safe to apply on a database whose tables already
+-- exist (e.g. one created by an earlier seed run).
 -- gen_random_uuid() is built into Postgres 13+ (no extension required on Neon).
 
 CREATE TABLE IF NOT EXISTS projects (

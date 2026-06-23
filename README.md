@@ -44,7 +44,8 @@ The default admin created by `npm run seed` is **username: `admin`, password: `a
 This repo is configured to run on Vercel as a serverless function:
 
 - `api/index.js` exports the Express app as the function handler.
-- `vercel.json` rewrites all non-static requests to that function; `public/` assets are served from Vercel's CDN.
+- `vercel.json` lets Vercel's CDN serve `public/` (HTML + static assets via `cleanUrls`); the function handles only `/api/*`.
+- The `vercel-build` script runs database migrations on **every deploy**, so schema changes ship automatically when you push.
 
 Steps:
 
@@ -58,3 +59,12 @@ Steps:
 5. **Deploy.** Static pages, the `/api/*` endpoints, and the admin dashboard (`/admin`) will all be served by the single function.
 
 Any other Node-friendly host (Render, Railway, Fly.io, etc.) can also run this repo via `npm start`; set `DATABASE_URL`, `JWT_SECRET`, and `PORT` as needed.
+
+## Database migrations
+
+Schema is managed with plain SQL migration files in `backend/db/migrations/` (e.g. `001_init.sql`). A small runner ([backend/db/migrate.js](backend/db/migrate.js)) tracks applied migrations in a `_migrations` table and applies any pending ones, each in its own transaction.
+
+- **On Vercel:** the `vercel-build` script runs migrations during every deployment. Pending migrations apply once; if there are none, it's a no-op. (If `DATABASE_URL` isn't set, migrations are skipped so the build still succeeds.)
+- **Locally:** `npm run migrate`.
+
+To change the schema, add the next numbered file — e.g. `backend/db/migrations/002_add_published_flag.sql` — and push. It applies on the next deploy. Migrations only change schema; they never wipe data. Use `npm run seed` separately (and manually) when you want to reset the sample content.
