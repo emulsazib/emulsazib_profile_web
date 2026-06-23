@@ -9,7 +9,7 @@ const router = express.Router();
 // GET /api/achievements
 router.get('/', async (_req, res) => {
   try {
-    const achievements = await Achievement.find().lean();
+    const achievements = await Achievement.findAll();
     res.json({ achievements });
   } catch (err) {
     res.status(500).json({ status: 'error', message: 'Failed to load achievements.' });
@@ -31,10 +31,7 @@ router.post('/', requireAuth, async (req, res) => {
 // PUT /api/achievements/:id
 router.put('/:id', requireAuth, async (req, res) => {
   try {
-    const achievement = await Achievement.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    }).lean();
+    const achievement = await Achievement.update(req.params.id, req.body);
     if (!achievement) return res.status(404).json({ status: 'error', message: 'Achievement not found.' });
     res.json(achievement);
   } catch (err) {
@@ -45,8 +42,8 @@ router.put('/:id', requireAuth, async (req, res) => {
 // DELETE /api/achievements/:id
 router.delete('/:id', requireAuth, async (req, res) => {
   try {
-    const achievement = await Achievement.findByIdAndDelete(req.params.id);
-    if (!achievement) return res.status(404).json({ status: 'error', message: 'Achievement not found.' });
+    const deleted = await Achievement.remove(req.params.id);
+    if (!deleted) return res.status(404).json({ status: 'error', message: 'Achievement not found.' });
     res.json({ status: 'ok', message: 'Achievement deleted.' });
   } catch (err) {
     res.status(400).json({ status: 'error', message: err.message });

@@ -1,8 +1,7 @@
 require('dotenv').config();
-const mongoose = require('mongoose');
-const Project = require('./backend/models/Project');
-const Achievement = require('./backend/models/Achievement');
-const BlogPost = require('./backend/models/BlogPost');
+const fs = require('fs');
+const path = require('path');
+const { pool, query } = require('./backend/config/db');
 const Admin = require('./backend/models/Admin');
 
 const projects = [
@@ -182,29 +181,46 @@ By leveraging modern CSS techniques, you can create stunning UIs that are both b
 
 async function seed() {
   try {
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log('Connected to MongoDB');
+    // Create tables if they don't exist (idempotent).
+    const schema = fs.readFileSync(path.join(__dirname, 'backend', 'db', 'schema.sql'), 'utf8');
+    await query(schema);
+    console.log('Ensured tables exist');
 
-    await Project.deleteMany({});
-    await Achievement.deleteMany({});
-    await BlogPost.deleteMany({});
+    await query('TRUNCATE projects, achievements, blog_posts RESTART IDENTITY');
     console.log('Cleared existing data');
 
-    await Project.insertMany(projects);
-    await Achievement.insertMany(achievements);
-    await BlogPost.insertMany(blogPosts);
+    for (const p of projects) {
+      await query(
+        `INSERT INTO projects (title, stack, description, link, github)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [p.title, p.stack || [], p.description, p.link || null, p.github || null]
+      );
+    }
+    for (const a of achievements) {
+      await query(
+        `INSERT INTO achievements (title, description, image, date)
+         VALUES ($1, $2, $3, $4)`,
+        [a.title, a.description, a.image || null, a.date || null]
+      );
+    }
+    for (const b of blogPosts) {
+      await query(
+        `INSERT INTO blog_posts (title, excerpt, content, author, date, tags)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [b.title, b.excerpt, b.content, b.author, b.date || null, b.tags || []]
+      );
+    }
     console.log('Seeded projects, achievements, and blog posts');
 
-    // Seed default admin user (skip if one already exists)
-    const existingAdmin = await Admin.findOne({ username: 'admin' });
-    if (!existingAdmin) {
-      await Admin.create({ username: 'admin', password: 'admin123' });
+    // Seed default admin user (skips if one already exists via ON CONFLICT).
+    const admin = await Admin.create({ username: 'admin', password: 'admin123' });
+    if (admin) {
       console.log('Created default admin user (username: admin, password: admin123)');
     } else {
       console.log('Admin user already exists, skipping');
     }
 
-    await mongoose.connection.close();
+    await pool.end();
     console.log('Done — connection closed');
   } catch (err) {
     console.error('Seed error:', err.message);

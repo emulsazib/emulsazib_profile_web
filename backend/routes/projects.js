@@ -9,7 +9,7 @@ const router = express.Router();
 // GET /api/projects
 router.get('/', async (_req, res) => {
   try {
-    const projects = await Project.find().lean();
+    const projects = await Project.findAll();
     res.json({ projects });
   } catch (err) {
     res.status(500).json({ status: 'error', message: 'Failed to load projects.' });
@@ -31,10 +31,7 @@ router.post('/', requireAuth, async (req, res) => {
 // PUT /api/projects/:id
 router.put('/:id', requireAuth, async (req, res) => {
   try {
-    const project = await Project.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    }).lean();
+    const project = await Project.update(req.params.id, req.body);
     if (!project) return res.status(404).json({ status: 'error', message: 'Project not found.' });
     res.json(project);
   } catch (err) {
@@ -45,8 +42,8 @@ router.put('/:id', requireAuth, async (req, res) => {
 // DELETE /api/projects/:id
 router.delete('/:id', requireAuth, async (req, res) => {
   try {
-    const project = await Project.findByIdAndDelete(req.params.id);
-    if (!project) return res.status(404).json({ status: 'error', message: 'Project not found.' });
+    const deleted = await Project.remove(req.params.id);
+    if (!deleted) return res.status(404).json({ status: 'error', message: 'Project not found.' });
     res.json({ status: 'ok', message: 'Project deleted.' });
   } catch (err) {
     res.status(400).json({ status: 'error', message: err.message });

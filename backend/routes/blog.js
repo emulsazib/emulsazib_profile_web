@@ -9,7 +9,7 @@ const router = express.Router();
 // GET /api/blog
 router.get('/', async (_req, res) => {
   try {
-    const posts = await BlogPost.find({}, 'title excerpt author date tags').lean();
+    const posts = await BlogPost.findAll();
     res.json({ posts });
   } catch (err) {
     res.status(500).json({ status: 'error', message: 'Failed to load blog posts.' });
@@ -19,7 +19,7 @@ router.get('/', async (_req, res) => {
 // GET /api/blog/:id
 router.get('/:id', async (req, res) => {
   try {
-    const post = await BlogPost.findById(req.params.id).lean();
+    const post = await BlogPost.findById(req.params.id);
     if (!post) {
       return res.status(404).json({ status: 'error', message: 'Blog post not found.' });
     }
@@ -44,10 +44,7 @@ router.post('/', requireAuth, async (req, res) => {
 // PUT /api/blog/:id
 router.put('/:id', requireAuth, async (req, res) => {
   try {
-    const post = await BlogPost.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    }).lean();
+    const post = await BlogPost.update(req.params.id, req.body);
     if (!post) return res.status(404).json({ status: 'error', message: 'Blog post not found.' });
     res.json(post);
   } catch (err) {
@@ -58,8 +55,8 @@ router.put('/:id', requireAuth, async (req, res) => {
 // DELETE /api/blog/:id
 router.delete('/:id', requireAuth, async (req, res) => {
   try {
-    const post = await BlogPost.findByIdAndDelete(req.params.id);
-    if (!post) return res.status(404).json({ status: 'error', message: 'Blog post not found.' });
+    const deleted = await BlogPost.remove(req.params.id);
+    if (!deleted) return res.status(404).json({ status: 'error', message: 'Blog post not found.' });
     res.json({ status: 'ok', message: 'Blog post deleted.' });
   } catch (err) {
     res.status(400).json({ status: 'error', message: err.message });

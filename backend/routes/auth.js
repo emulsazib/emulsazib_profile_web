@@ -12,11 +12,11 @@ router.post('/login', async (req, res) => {
     if (!username || !password) {
       return res.status(400).json({ status: 'error', message: 'Username and password are required.' });
     }
-    const admin = await Admin.findOne({ username: username.toLowerCase().trim() });
-    if (!admin || !(await admin.comparePassword(password))) {
+    const admin = await Admin.findByUsername(username);
+    if (!admin || !(await Admin.comparePassword(password, admin.password))) {
       return res.status(401).json({ status: 'error', message: 'Invalid username or password.' });
     }
-    const token = jwt.sign({ id: admin._id, username: admin.username }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ id: admin.id, username: admin.username }, JWT_SECRET, { expiresIn: '7d' });
     res.json({ status: 'ok', token, username: admin.username });
   } catch (err) {
     res.status(500).json({ status: 'error', message: 'Login failed.' });

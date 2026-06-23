@@ -1,20 +1,27 @@
-const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const { query } = require('../config/db');
 
-const adminSchema = new mongoose.Schema({
-  name: { type: String, required: true, trim: true },
-  email: { type: String, required: true, unique: true, trim: true, lowercase: true },
-  username: { type: String, required: true, unique: true, trim: true, lowercase: true },
-  password: { type: String, required: true, minlength: 6 },
-}, { timestamps: true });
+module.exports = {
+  async findByUsername(username) {
+    const { rows } = await query('SELECT * FROM admins WHERE username = $1', [
+      username.toLowerCase().trim(),
+    ]);
+    return rows[0] || null;
+  },
 
-adminSchema.pre('save', async function () {
-  if (!this.isModified('password')) return;
-  this.password = await bcrypt.hash(this.password, 12);
-});
+  async create({ name = null, email = null, username, password }) {
+    const hash = await bcrypt.hash(password, 12);
+    const { rows } = await query(
+      `INSERT INTO admins (name, email, username, password)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (username) DO NOTHING
+       RETURNING *`,
+      [name, email ? email.toLowerCase().trim() : null, username.toLowerCase().trim(), hash]
+    );
+    return rows[0] || null;
+  },
 
-adminSchema.methods.comparePassword = function (candidate) {
-  return bcrypt.compare(candidate, this.password);
+  comparePassword(candidate, hash) {
+    return bcrypt.compare(candidate, hash);
+  },
 };
-
-module.exports = mongoose.model('Admin', adminSchema);

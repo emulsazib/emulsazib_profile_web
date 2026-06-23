@@ -1,15 +1,23 @@
-const mongoose = require('mongoose');
+const { Pool } = require('pg');
 
-const connectDB = async () => {
-  try {
-    await mongoose.connect(process.env.MONGODB_URI, {
-      minHeartbeatFrequencyMS: 500,
-    });
-    console.log('Connected to MongoDB');
-  } catch (err) {
-    console.error('MongoDB connection error:', err.message);
-    process.exit(1);
-  }
-};
+// ── Cached connection pool ──
+// Reused across serverless (warm) invocations to avoid exhausting Postgres
+// connections. The pool connects lazily on the first query.
+let pool = global._pgPool;
 
-module.exports = connectDB;
+if (!pool) {
+  pool = global._pgPool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    // Neon (and most hosted Postgres) require SSL.
+    ssl: { rejectUnauthorized: false },
+    max: 5,
+  });
+
+  pool.on('error', (err) => {
+    console.error('Unexpected Postgres pool error:', err.message);
+  });
+}
+
+const query = (text, params) => pool.query(text, params);
+
+module.exports = { pool, query };
