@@ -41,4 +41,14 @@ app.use('/api/contact', contactRoutes);
 // ── HTML page routes (must be last) ──
 app.use('/', pageRoutes);
 
+// ── Error handler ──
+// Guarantees the serverless function always responds instead of crashing
+// (a FUNCTION_INVOCATION_FAILED on Vercel) when a handler throws.
+// eslint-disable-next-line no-unused-vars
+app.use((err, _req, res, _next) => {
+  console.error('Unhandled error:', err);
+  if (res.headersSent) return;
+  res.status(500).json({ status: 'error', message: 'Internal server error.' });
+});
+
 module.exports = app;

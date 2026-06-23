@@ -1,6 +1,9 @@
 {
   "version": 2,
+  "cleanUrls": true,
   "rewrites": [
-    { "source": "/(.*)", "destination": "/api/index" }
+    { "source": "/admin/login", "destination": "/admin-login.html" },
+    { "source": "/api/(.*)", "destination": "/api/index" },
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

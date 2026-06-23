@@ -11,6 +11,9 @@ if (!pool) {
     // Neon (and most hosted Postgres) require SSL.
     ssl: { rejectUnauthorized: false },
     max: 5,
+    // Fail fast rather than hanging until the serverless function times out.
+    connectionTimeoutMillis: 10000,
+    idleTimeoutMillis: 10000,
   });
 
   pool.on('error', (err) => {

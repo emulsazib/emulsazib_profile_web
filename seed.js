@@ -4,37 +4,51 @@ const path = require('path');
 const { pool, query } = require('./backend/config/db');
 const Admin = require('./backend/models/Admin');
 
+// Curated from https://github.com/emulsazib. Descriptions were inferred from the
+// repo names/primary languages (the repos have no descriptions) — refine them any
+// time from the /admin dashboard.
 const projects = [
   {
-    title: 'Realtime Collaboration Suite',
-    stack: ['TypeScript', 'React', 'WebSockets'],
+    title: 'Developer Portfolio (this site)',
+    stack: ['Express', 'Node.js', 'PostgreSQL', 'Vanilla JS'],
     description:
-      'Designed collaborative whiteboarding with presence indicators, optimistic updates, and end-to-end encryption.',
-    link: 'https://example.com/collab',
-    github: 'https://github.com/emulsazib/collab-suite',
+      'A full-stack personal portfolio with an Express REST API, a PostgreSQL data layer, an admin dashboard for managing content, and a theme-switching frontend.',
+    link: 'https://emulsazib.github.io/PortfolioDemoWeb/',
+    github: 'https://github.com/emulsazib/emulsazib_profile_web',
   },
   {
-    title: 'Data Storytelling Platform',
-    stack: ['Next.js', 'D3', 'Node.js'],
+    title: 'nano-os',
+    stack: ['Python'],
     description:
-      'Built interactive narratives for climate-tech startups, turning raw telemetry into digestible dashboards.',
-    link: 'https://example.com/story',
-    github: 'https://github.com/emulsazib/data-story',
+      'An experimental, minimal operating-system project exploring low-level OS concepts.',
+    github: 'https://github.com/emulsazib/nano-os',
   },
   {
-    title: 'Creator Commerce Engine',
-    stack: ['Express', 'MongoDB', 'Stripe'],
-    description:
-      'Shipped checkout flows, subscription tiers, and analytics for indie creators serving 20k+ monthly customers.',
-    link: 'https://example.com/commerce',
-    github: 'https://github.com/emulsazib/commerce-engine',
+    title: 'omega-vx6 RISC-V',
+    stack: ['C', 'RISC-V'],
+    description: 'A RISC-V processor project implemented in C.',
+    github: 'https://github.com/emulsazib/omega-vx6-riscv',
   },
   {
-    title: 'Portfolio Demo Website',
-    stack: ['Express', 'Node.js', 'Vanilla JS'],
+    title: 'LLVM Compiler Infrastructure',
+    stack: ['C++', 'LLVM'],
     description:
-      'Modern full-stack portfolio website with multi-page navigation, dark mode, and API-driven content.',
-    github: 'https://github.com/emulsazib/PortfolioDemoWeb',
+      'Compiler experiments and tooling built on top of the LLVM compiler infrastructure.',
+    github: 'https://github.com/emulsazib/LLVM-compiler-infrastructure',
+  },
+  {
+    title: 'Violence Detection with Face Recognition',
+    stack: ['Python', 'Computer Vision', 'Machine Learning'],
+    description:
+      'A computer-vision system that detects violent activity in video while performing face recognition.',
+    github: 'https://github.com/emulsazib/violence_detection_with_facerecognation',
+  },
+  {
+    title: 'MediPoint Web',
+    stack: ['JavaScript', 'HTML', 'CSS'],
+    description: 'A medical-services web application front-end with a live demo.',
+    link: 'https://emulsazib.github.io/web_medipoint/',
+    github: 'https://github.com/emulsazib/web_medipoint',
   },
 ];
 
