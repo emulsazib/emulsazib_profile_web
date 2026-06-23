@@ -11,8 +11,9 @@ if (!pool) {
     // Neon (and most hosted Postgres) require SSL.
     ssl: { rejectUnauthorized: false },
     max: 5,
-    // Fail fast rather than hanging until the serverless function times out.
-    connectionTimeoutMillis: 10000,
+    // Neon scales to zero when idle; a cold start can take longer than 10s, so
+    // allow generous headroom (mainly for the build-time migration step).
+    connectionTimeoutMillis: 30000,
     idleTimeoutMillis: 10000,
   });
 
