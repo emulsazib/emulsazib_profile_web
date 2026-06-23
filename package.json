@@ -24,6 +24,7 @@
     "node": "22.x"
   },
   "dependencies": {
+    "@vercel/speed-insights": "^2.0.0",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "dotenv": "^17.3.1",
