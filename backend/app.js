@@ -19,7 +19,9 @@ const app = express();
 // ── Global middleware ──
 app.use(morgan('dev'));
 app.use(cors());
-app.use(express.json());
+// Base64-encoded images (stored inline in Postgres) are sent as JSON, so the
+// default 100kb body limit would reject them. Allow generous headroom.
+app.use(express.json({ limit: '12mb' }));
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // ── Static data API routes ──

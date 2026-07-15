@@ -242,6 +242,7 @@
     project: [
       { name: 'title', label: 'Title', type: 'text', required: true },
       { name: 'description', label: 'Description', type: 'textarea', required: true },
+      { name: 'image', label: 'Image', type: 'image', hint: 'Uploaded and stored in the database. Optional.' },
       { name: 'stack', label: 'Tech Stack', type: 'text', hint: 'Comma-separated (e.g. React, Node.js, MongoDB)' },
       { name: 'link', label: 'Live Link', type: 'url' },
       { name: 'github', label: 'GitHub URL', type: 'url' },
@@ -250,7 +251,7 @@
       { name: 'title', label: 'Title', type: 'text', required: true },
       { name: 'description', label: 'Description', type: 'textarea', required: true },
       { name: 'date', label: 'Date', type: 'text', hint: 'e.g. March 2024' },
-      { name: 'image', label: 'Image URL', type: 'url' },
+      { name: 'image', label: 'Image', type: 'image', hint: 'Uploaded and stored in the database. Optional.' },
     ],
     blog: [
       { name: 'title', label: 'Title', type: 'text', required: true },
@@ -267,6 +268,24 @@
     modalFields.innerHTML = fields.map((f) => {
       let val = data[f.name] || '';
       if (Array.isArray(val)) val = val.join(', ');
+
+      if (f.type === 'image') {
+        return `
+          <label>
+            ${f.label}${f.required ? ' *' : ''}
+            <div class="image-field" data-name="${f.name}">
+              <input type="hidden" name="${f.name}" value="${esc(val)}" />
+              <input type="file" class="image-field__file" accept="image/*" data-target="${f.name}" />
+              <div class="image-field__preview" ${val ? '' : 'hidden'}>
+                <img src="${esc(val)}" alt="Preview" />
+                <button type="button" class="image-field__remove" data-target="${f.name}">Remove</button>
+              </div>
+            </div>
+            ${f.hint ? `<span class="hint">${f.hint}</span>` : ''}
+          </label>
+        `;
+      }
+
       const inputEl = f.type === 'textarea'
         ? `<textarea name="${f.name}" rows="${f.rows || 3}" ${f.required ? 'required' : ''} placeholder="Enter ${f.label.toLowerCase()}...">${esc(val)}</textarea>`
         : `<input type="${f.type}" name="${f.name}" value="${esc(val)}" ${f.required ? 'required' : ''} placeholder="Enter ${f.label.toLowerCase()}..." />`;
@@ -279,6 +298,64 @@
       `;
     }).join('');
   }
+
+  // Downscale an image file in the browser and return a Base64 JPEG data URL.
+  // Keeps rows stored in Postgres small (large uploads are resized to fit
+  // within maxDim on the longest side).
+  function fileToResizedDataUrl(file, maxDim = 1000, quality = 0.82) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('Could not read file'));
+      reader.onload = () => {
+        const img = new Image();
+        img.onerror = () => reject(new Error('Invalid image file'));
+        img.onload = () => {
+          let { width, height } = img;
+          if (width > maxDim || height > maxDim) {
+            const scale = Math.min(maxDim / width, maxDim / height);
+            width = Math.round(width * scale);
+            height = Math.round(height * scale);
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // ── Image field: upload / preview / remove (event delegation) ──
+  modalFields.addEventListener('change', async (e) => {
+    const fileInput = e.target.closest('.image-field__file');
+    if (!fileInput) return;
+    const file = fileInput.files && fileInput.files[0];
+    if (!file) return;
+    const wrap = fileInput.closest('.image-field');
+    const hidden = wrap.querySelector(`input[type="hidden"]`);
+    const preview = wrap.querySelector('.image-field__preview');
+    try {
+      const dataUrl = await fileToResizedDataUrl(file);
+      hidden.value = dataUrl;
+      preview.querySelector('img').src = dataUrl;
+      preview.hidden = false;
+    } catch (err) {
+      showToast(err.message || 'Failed to process image', true);
+      fileInput.value = '';
+    }
+  });
+
+  modalFields.addEventListener('click', (e) => {
+    const removeBtn = e.target.closest('.image-field__remove');
+    if (!removeBtn) return;
+    const wrap = removeBtn.closest('.image-field');
+    wrap.querySelector('input[type="hidden"]').value = '';
+    wrap.querySelector('.image-field__file').value = '';
+    wrap.querySelector('.image-field__preview').hidden = true;
+  });
 
   function getFormData(type) {
     const fd = new FormData(modalForm);

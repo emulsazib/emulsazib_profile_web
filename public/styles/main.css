@@ -280,40 +280,94 @@ main {
   margin-bottom: 2rem;
 }
 
-.projects-grid {
+/* ── Unified card grid (projects + achievements share one equal-size card) ── */
+.card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 1.25rem;
+  align-items: stretch;
 }
 
-.project-card {
+.card {
+  height: 100%;
   border: 1px solid var(--border);
-  padding: 1.5rem;
+  padding: 1.25rem;
   border-radius: 24px;
-  background: var(--bg);
+  background: var(--bg-alt);
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  transition: transform 0.2s ease, border 0.2s ease;
+  transition: transform 0.2s ease, border 0.2s ease, box-shadow 0.2s ease;
 }
 
-.project-card:hover {
+.card:hover {
   transform: translateY(-4px);
   border-color: var(--accent);
+  box-shadow: var(--shadow);
 }
 
-.project-card h3 {
+.card__media {
+  border-radius: 16px;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.card__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.card h3 {
   font-size: 1.2rem;
+  line-height: 1.3;
 }
 
-.project-card ul {
+.card__desc {
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+  overflow: hidden;
+}
+
+.card.expanded .card__desc {
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+  overflow: visible;
+}
+
+.read-more-btn {
+  align-self: flex-start;
+  color: var(--accent-strong);
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 0.1rem 0;
+}
+
+.read-more-btn:hover {
+  text-decoration: underline;
+}
+
+.card__tags {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
   list-style: none;
 }
 
-.project-card li {
+.card__tags li {
   font-size: 0.85rem;
   padding: 0.3rem 0.75rem;
   border-radius: 999px;
@@ -321,10 +375,38 @@ main {
   color: var(--muted);
 }
 
-.project-card a {
+/* Footer sits at the bottom so cards of differing content stay aligned. */
+.card__footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: auto;
+  align-items: center;
+}
+
+.card__footer:empty {
+  display: none;
+}
+
+.card__footer a {
   color: var(--accent-strong);
   font-weight: 600;
   text-decoration: none;
+}
+
+.card__footer a:hover {
+  text-decoration: underline;
+}
+
+.card__date {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.panel__footer {
+  margin-top: 1.75rem;
+  display: flex;
+  justify-content: center;
 }
 
 .timeline {
@@ -857,7 +939,8 @@ body[data-theme='dark'] .mobile-dropdown {
   }
 
   .gallery-grid,
-  .blog-grid {
+  .blog-grid,
+  .card-grid {
     grid-template-columns: 1fr;
   }
 

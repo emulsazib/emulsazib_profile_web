@@ -1,6 +1,7 @@
 const body = document.body;
 const themeToggle = document.getElementById('theme-toggle');
 const projectsGrid = document.getElementById('projects-grid');
+const achievementsGrid = document.getElementById('achievements-grid');
 const timelineList = document.getElementById('timeline-list');
 const summaryHeadline = document.getElementById('summary-headline');
 const summaryBlurb = document.getElementById('summary-blurb');
@@ -129,14 +130,16 @@ function wireNavigation() {
 
 async function hydrateFromApi() {
   try {
-    const [summary, projects, timeline] = await Promise.all([
+    const [summary, projects, achievements, timeline] = await Promise.all([
       fetchJson('/api/summary'),
       fetchJson('/api/projects'),
+      fetchJson('/api/achievements'),
       fetchJson('/api/timeline'),
     ]);
 
     renderSummary(summary);
     renderProjects(projects?.projects || []);
+    renderAchievements(achievements?.achievements || []);
     renderTimeline(timeline?.timeline || []);
   } catch (error) {
     console.error('Failed to load API data', error);
@@ -165,26 +168,78 @@ function renderProjects(list) {
     return;
   }
 
-  projectsGrid.innerHTML = list
-    .map(
-      ({ title, description, stack, link, github }) => `
-        <article class="project-card">
-          <div>
-            <p class="eyebrow">${stack[0] || 'Project'}</p>
-            <h3>${title}</h3>
-            <p>${description}</p>
-          </div>
-          <ul>
-            ${stack.map((tech) => `<li>${tech}</li>`).join('')}
-          </ul>
-          <div style="display: flex; gap: 1rem; margin-top: 0.5rem;">
-            ${link ? `<a href="${link}" target="_blank" rel="noreferrer">View details →</a>` : ''}
-            ${github ? `<a href="${github}" target="_blank" rel="noreferrer">GitHub Repo →</a>` : ''}
-          </div>
-        </article>
-      `,
-    )
-    .join('');
+  projectsGrid.innerHTML = list.map(projectCard).join('');
+  setupReadMore(projectsGrid);
+}
+
+function renderAchievements(list) {
+  if (!achievementsGrid) return;
+  if (!list.length) {
+    achievementsGrid.innerHTML = '<p>No achievements yet. Check back soon.</p>';
+    return;
+  }
+
+  achievementsGrid.innerHTML = list.map(achievementCard).join('');
+  setupReadMore(achievementsGrid);
+}
+
+// ── Shared card markup (projects + achievements share one equal-size card) ──
+function cardMedia(image, title) {
+  if (!image) return '';
+  return `<div class="card__media"><img src="${image}" alt="${title}" loading="lazy"></div>`;
+}
+
+function projectCard({ title, description, stack = [], image, link, github }) {
+  return `
+    <article class="card">
+      ${cardMedia(image, title)}
+      <div class="card__body">
+        <p class="eyebrow">${stack[0] || 'Project'}</p>
+        <h3>${title}</h3>
+        <p class="card__desc">${description}</p>
+        <button class="read-more-btn" type="button" hidden>Read more</button>
+      </div>
+      ${stack.length ? `<ul class="card__tags">${stack.map((tech) => `<li>${tech}</li>`).join('')}</ul>` : ''}
+      <div class="card__footer">
+        ${link ? `<a href="${link}" target="_blank" rel="noreferrer">View details →</a>` : ''}
+        ${github ? `<a href="${github}" target="_blank" rel="noreferrer">GitHub Repo →</a>` : ''}
+      </div>
+    </article>
+  `;
+}
+
+function achievementCard({ title, description, image, date }) {
+  return `
+    <article class="card">
+      ${cardMedia(image, title)}
+      <div class="card__body">
+        <p class="eyebrow">Achievement</p>
+        <h3>${title}</h3>
+        <p class="card__desc">${description}</p>
+        <button class="read-more-btn" type="button" hidden>Read more</button>
+      </div>
+      <div class="card__footer">
+        ${date ? `<span class="card__date">${date}</span>` : ''}
+      </div>
+    </article>
+  `;
+}
+
+// Reveal a "Read more" toggle only on cards whose description is actually
+// clamped, then wire it to expand/collapse the card.
+function setupReadMore(container) {
+  container.querySelectorAll('.card').forEach((card) => {
+    const desc = card.querySelector('.card__desc');
+    const btn = card.querySelector('.read-more-btn');
+    if (!desc || !btn) return;
+    if (desc.scrollHeight - desc.clientHeight > 2) {
+      btn.hidden = false;
+      btn.addEventListener('click', () => {
+        const expanded = card.classList.toggle('expanded');
+        btn.textContent = expanded ? 'Read less' : 'Read more';
+      });
+    }
+  });
 }
 
 function renderTimeline(list) {
@@ -209,6 +264,7 @@ function renderTimeline(list) {
 function renderErrorState() {
   const message = '<p class="form-status">Unable to load data from the server. Please refresh.</p>';
   if (projectsGrid) projectsGrid.innerHTML = message;
+  if (achievementsGrid) achievementsGrid.innerHTML = message;
   if (timelineList) timelineList.innerHTML = message;
 }
 

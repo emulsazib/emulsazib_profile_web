@@ -322,6 +322,45 @@
   margin-top: -0.25rem;
 }
 
+/* ── Image upload field ── */
+.image-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.image-field__file {
+  padding: 0.6rem 0.75rem !important;
+  cursor: pointer;
+}
+
+.image-field__preview {
+  position: relative;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.image-field__preview img {
+  max-width: 220px;
+  max-height: 150px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  object-fit: cover;
+}
+
+.image-field__remove {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.4rem;
+  width: auto !important;
+  padding: 0.25rem 0.6rem !important;
+  font-size: 0.75rem;
+  border-radius: 999px !important;
+  background: rgba(0, 0, 0, 0.65) !important;
+  color: #fff !important;
+  border: none !important;
+}
+
 .modal__actions {
   display: flex;
   justify-content: flex-end;

@@ -7,6 +7,7 @@ const toApi = (r) =>
     title: r.title,
     stack: r.stack || [],
     description: r.description,
+    image: r.image,
     link: r.link,
     github: r.github,
   };
@@ -19,10 +20,10 @@ module.exports = {
 
   async create(b) {
     const { rows } = await query(
-      `INSERT INTO projects (title, stack, description, link, github)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO projects (title, stack, description, image, link, github)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [b.title, b.stack || [], b.description, b.link || null, b.github || null]
+      [b.title, b.stack || [], b.description, b.image || null, b.link || null, b.github || null]
     );
     return toApi(rows[0]);
   },
@@ -30,10 +31,10 @@ module.exports = {
   async update(id, b) {
     const { rows } = await query(
       `UPDATE projects
-         SET title = $2, stack = $3, description = $4, link = $5, github = $6
+         SET title = $2, stack = $3, description = $4, image = $5, link = $6, github = $7
        WHERE id = $1
        RETURNING *`,
-      [id, b.title, b.stack || [], b.description, b.link || null, b.github || null]
+      [id, b.title, b.stack || [], b.description, b.image || null, b.link || null, b.github || null]
     );
     return toApi(rows[0]);
   },

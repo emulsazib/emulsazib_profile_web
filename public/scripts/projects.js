@@ -17,26 +17,44 @@ function renderProjects(projects) {
     return;
   }
 
-  projectsGrid.innerHTML = projects
-    .map(
-      ({ title, description, stack, link, github }) => `
-        <article class="project-card">
-          <div>
-            <p class="eyebrow">${stack[0] || 'Project'}</p>
-            <h3>${title}</h3>
-            <p>${description}</p>
-          </div>
-          <ul>
-            ${stack.map((tech) => `<li>${tech}</li>`).join('')}
-          </ul>
-          <div style="display: flex; gap: 1rem; margin-top: 0.5rem;">
-            ${link ? `<a href="${link}" target="_blank" rel="noreferrer">View Project →</a>` : ''}
-            ${github ? `<a href="${github}" target="_blank" rel="noreferrer">GitHub Repo →</a>` : ''}
-          </div>
-        </article>
-      `,
-    )
-    .join('');
+  projectsGrid.innerHTML = projects.map(projectCard).join('');
+  setupReadMore(projectsGrid);
+}
+
+function projectCard({ title, description, stack = [], image, link, github }) {
+  const media = image ? `<div class="card__media"><img src="${image}" alt="${title}" loading="lazy"></div>` : '';
+  return `
+    <article class="card">
+      ${media}
+      <div class="card__body">
+        <p class="eyebrow">${stack[0] || 'Project'}</p>
+        <h3>${title}</h3>
+        <p class="card__desc">${description}</p>
+        <button class="read-more-btn" type="button" hidden>Read more</button>
+      </div>
+      ${stack.length ? `<ul class="card__tags">${stack.map((tech) => `<li>${tech}</li>`).join('')}</ul>` : ''}
+      <div class="card__footer">
+        ${link ? `<a href="${link}" target="_blank" rel="noreferrer">View Project →</a>` : ''}
+        ${github ? `<a href="${github}" target="_blank" rel="noreferrer">GitHub Repo →</a>` : ''}
+      </div>
+    </article>
+  `;
+}
+
+// Reveal a "Read more" toggle only on cards whose description is clamped.
+function setupReadMore(container) {
+  container.querySelectorAll('.card').forEach((card) => {
+    const desc = card.querySelector('.card__desc');
+    const btn = card.querySelector('.read-more-btn');
+    if (!desc || !btn) return;
+    if (desc.scrollHeight - desc.clientHeight > 2) {
+      btn.hidden = false;
+      btn.addEventListener('click', () => {
+        const expanded = card.classList.toggle('expanded');
+        btn.textContent = expanded ? 'Read less' : 'Read more';
+      });
+    }
+  });
 }
 
 loadProjects();
