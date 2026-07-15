@@ -21,8 +21,13 @@ function renderProjects(projects) {
   setupReadMore(projectsGrid);
 }
 
+// Static image used when a project has no image saved yet, and as an onerror
+// fallback if a stored image path/data fails to load.
+const FALLBACK_PROJECT_IMAGE = '/images/Cover.jpg';
+
 function projectCard({ title, description, stack = [], image, link, github }) {
-  const media = image ? `<div class="card__media"><img src="${image}" alt="${title}" loading="lazy"></div>` : '';
+  const src = image || FALLBACK_PROJECT_IMAGE;
+  const media = `<div class="card__media"><img src="${src}" alt="${title}" loading="lazy" onerror="this.onerror=null;this.src='${FALLBACK_PROJECT_IMAGE}'"></div>`;
   return `
     <article class="card">
       ${media}

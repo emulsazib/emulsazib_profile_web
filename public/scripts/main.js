@@ -184,15 +184,23 @@ function renderAchievements(list) {
 }
 
 // ── Shared card markup (projects + achievements share one equal-size card) ──
-function cardMedia(image, title) {
-  if (!image) return '';
-  return `<div class="card__media"><img src="${image}" alt="${title}" loading="lazy"></div>`;
+// Static image used when a project has no image saved yet, and as an onerror
+// fallback if a stored image path/data fails to load.
+const FALLBACK_PROJECT_IMAGE = '/images/Cover.jpg';
+
+function cardMedia(image, title, fallback) {
+  const src = image || fallback;
+  if (!src) return '';
+  const onError = fallback
+    ? ` onerror="this.onerror=null;this.src='${fallback}'"`
+    : '';
+  return `<div class="card__media"><img src="${src}" alt="${title}" loading="lazy"${onError}></div>`;
 }
 
 function projectCard({ title, description, stack = [], image, link, github }) {
   return `
     <article class="card">
-      ${cardMedia(image, title)}
+      ${cardMedia(image, title, FALLBACK_PROJECT_IMAGE)}
       <div class="card__body">
         <p class="eyebrow">${stack[0] || 'Project'}</p>
         <h3>${title}</h3>
