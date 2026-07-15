@@ -361,6 +361,56 @@
   border: none !important;
 }
 
+/* ── Range (proficiency level) field ── */
+.range-field {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.range-field input[type="range"] {
+  flex: 1;
+  padding: 0 !important;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.range-field__value {
+  min-width: 3.2rem;
+  text-align: right;
+  font-weight: 600;
+  color: var(--accent-strong);
+}
+
+/* ── Skill level cell in the admin table ── */
+.cell-level {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.cell-level__track {
+  flex: 1;
+  min-width: 60px;
+  max-width: 160px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.cell-level__fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.cell-level span {
+  font-size: 0.85rem;
+  color: var(--muted);
+  min-width: 2.6rem;
+}
+
 .modal__actions {
   display: flex;
   justify-content: flex-end;

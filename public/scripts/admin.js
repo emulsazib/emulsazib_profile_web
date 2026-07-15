@@ -32,12 +32,14 @@
 
   const API = {
     projects: '/api/projects',
+    skills: '/api/skills',
     achievements: '/api/achievements',
     blog: '/api/blog',
   };
 
   const state = {
     projects: [],
+    skills: [],
     achievements: [],
     blog: [],
     activeTab: 'projects',
@@ -119,12 +121,14 @@
   // ── Load all data ──
   async function loadAll() {
     try {
-      const [projRes, achRes, blogRes] = await Promise.all([
+      const [projRes, skillRes, achRes, blogRes] = await Promise.all([
         fetchJSON(API.projects),
+        fetchJSON(API.skills),
         fetchJSON(API.achievements),
         fetchJSON(API.blog),
       ]);
       state.projects = projRes.projects || [];
+      state.skills = skillRes.skills || [];
       state.achievements = achRes.achievements || [];
       state.blog = blogRes.posts || [];
       updateStats();
@@ -136,6 +140,7 @@
 
   function updateStats() {
     $('#stat-projects').textContent = state.projects.length;
+    $('#stat-skills').textContent = state.skills.length;
     $('#stat-achievements').textContent = state.achievements.length;
     $('#stat-blog').textContent = state.blog.length;
   }
@@ -155,6 +160,7 @@
   function renderActiveTab() {
     switch (state.activeTab) {
       case 'projects': renderProjects(); break;
+      case 'skills': renderSkills(); break;
       case 'achievements': renderAchievements(); break;
       case 'blog': renderBlog(); break;
     }
@@ -181,6 +187,36 @@
           <div class="action-btns">
             <button class="btn-edit" data-type="project" data-id="${p._id}">Edit</button>
             <button class="btn-delete" data-type="project" data-id="${p._id}">Delete</button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  // ── Render: Skills ──
+  function renderSkills() {
+    const tbody = $('#table-skills tbody');
+    const empty = $('#empty-skills');
+    if (!state.skills.length) {
+      tbody.innerHTML = '';
+      empty.hidden = false;
+      return;
+    }
+    empty.hidden = true;
+    tbody.innerHTML = state.skills.map((s) => `
+      <tr>
+        <td><strong>${esc(s.name)}</strong></td>
+        <td class="hide-mobile">${esc(s.category || '')}</td>
+        <td>
+          <div class="cell-level">
+            <div class="cell-level__track"><div class="cell-level__fill" style="width:${Number(s.level) || 0}%"></div></div>
+            <span>${Number(s.level) || 0}%</span>
+          </div>
+        </td>
+        <td>
+          <div class="action-btns">
+            <button class="btn-edit" data-type="skill" data-id="${s._id}">Edit</button>
+            <button class="btn-delete" data-type="skill" data-id="${s._id}">Delete</button>
           </div>
         </td>
       </tr>
@@ -247,6 +283,11 @@
       { name: 'link', label: 'Live Link', type: 'url' },
       { name: 'github', label: 'GitHub URL', type: 'url' },
     ],
+    skill: [
+      { name: 'name', label: 'Name', type: 'text', required: true },
+      { name: 'category', label: 'Category', type: 'text', hint: 'e.g. Frontend, Backend, Languages, Tools' },
+      { name: 'level', label: 'Proficiency Level', type: 'range' },
+    ],
     achievement: [
       { name: 'title', label: 'Title', type: 'text', required: true },
       { name: 'description', label: 'Description', type: 'textarea', required: true },
@@ -268,6 +309,20 @@
     modalFields.innerHTML = fields.map((f) => {
       let val = data[f.name] || '';
       if (Array.isArray(val)) val = val.join(', ');
+
+      if (f.type === 'range') {
+        const level = val === '' || val == null ? 50 : val;
+        return `
+          <label>
+            ${f.label}${f.required ? ' *' : ''}
+            <div class="range-field">
+              <input type="range" name="${f.name}" min="0" max="100" step="1" value="${esc(level)}" />
+              <output class="range-field__value">${esc(level)}%</output>
+            </div>
+            ${f.hint ? `<span class="hint">${f.hint}</span>` : ''}
+          </label>
+        `;
+      }
 
       if (f.type === 'image') {
         return `
@@ -357,6 +412,14 @@
     wrap.querySelector('.image-field__preview').hidden = true;
   });
 
+  // ── Range field: live value readout ──
+  modalFields.addEventListener('input', (e) => {
+    const range = e.target.closest('input[type="range"]');
+    if (!range) return;
+    const output = range.parentElement.querySelector('.range-field__value');
+    if (output) output.textContent = `${range.value}%`;
+  });
+
   function getFormData(type) {
     const fd = new FormData(modalForm);
     const data = {};
@@ -373,12 +436,12 @@
 
   // ── API endpoint for type ──
   function apiUrl(type) {
-    const map = { project: API.projects, achievement: API.achievements, blog: API.blog };
+    const map = { project: API.projects, skill: API.skills, achievement: API.achievements, blog: API.blog };
     return map[type];
   }
 
   function stateKey(type) {
-    const map = { project: 'projects', achievement: 'achievements', blog: 'blog' };
+    const map = { project: 'projects', skill: 'skills', achievement: 'achievements', blog: 'blog' };
     return map[type];
   }
 
@@ -498,6 +561,7 @@
 
   // ── Add buttons ──
   $('#btn-add-project').addEventListener('click', () => openModal('project'));
+  $('#btn-add-skill').addEventListener('click', () => openModal('skill'));
   $('#btn-add-achievement').addEventListener('click', () => openModal('achievement'));
   $('#btn-add-blog').addEventListener('click', () => openModal('blog'));
 

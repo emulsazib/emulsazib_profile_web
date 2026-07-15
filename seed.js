@@ -51,6 +51,27 @@ const projects = [
   },
 ];
 
+const skills = [
+  // Frontend
+  { name: 'JavaScript', category: 'Frontend', level: 92 },
+  { name: 'HTML & CSS', category: 'Frontend', level: 90 },
+  { name: 'React', category: 'Frontend', level: 85 },
+  { name: 'TypeScript', category: 'Frontend', level: 78 },
+  // Backend
+  { name: 'Node.js', category: 'Backend', level: 88 },
+  { name: 'Express', category: 'Backend', level: 85 },
+  { name: 'PostgreSQL', category: 'Backend', level: 80 },
+  { name: 'REST APIs', category: 'Backend', level: 86 },
+  // Languages
+  { name: 'Python', category: 'Languages', level: 82 },
+  { name: 'C++', category: 'Languages', level: 72 },
+  { name: 'C', category: 'Languages', level: 70 },
+  // Tools
+  { name: 'Git & GitHub', category: 'Tools', level: 88 },
+  { name: 'Linux', category: 'Tools', level: 75 },
+  { name: 'Docker', category: 'Tools', level: 65 },
+];
+
 const achievements = [
   {
     title: 'Hackathon Winner 2024',
@@ -197,7 +218,7 @@ async function seed() {
     // Ensure the schema is up to date (idempotent).
     await runMigrations();
 
-    await query('TRUNCATE projects, achievements, blog_posts RESTART IDENTITY');
+    await query('TRUNCATE projects, skills, achievements, blog_posts RESTART IDENTITY');
     console.log('Cleared existing data');
 
     for (const p of projects) {
@@ -205,6 +226,13 @@ async function seed() {
         `INSERT INTO projects (title, stack, description, link, github)
          VALUES ($1, $2, $3, $4, $5)`,
         [p.title, p.stack || [], p.description, p.link || null, p.github || null]
+      );
+    }
+    for (const s of skills) {
+      await query(
+        `INSERT INTO skills (name, category, level)
+         VALUES ($1, $2, $3)`,
+        [s.name, s.category, s.level]
       );
     }
     for (const a of achievements) {
@@ -221,7 +249,7 @@ async function seed() {
         [b.title, b.excerpt, b.content, b.author, b.date || null, b.tags || []]
       );
     }
-    console.log('Seeded projects, achievements, and blog posts');
+    console.log('Seeded projects, skills, achievements, and blog posts');
 
     // Seed default admin user (skips if one already exists via ON CONFLICT).
     const admin = await Admin.create({ username: 'admin', password: 'admin123' });

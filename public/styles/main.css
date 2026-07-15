@@ -409,6 +409,136 @@ main {
   justify-content: center;
 }
 
+/* ── Skills section: radar chart + proficiency bars ── */
+.skills-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 320px) 1fr;
+  gap: 2rem;
+  align-items: center;
+  margin-top: 1.5rem;
+}
+
+/* When the radar can't render (too few axes), let the bars use the full width. */
+.skills-layout:has(.skills-radar:empty),
+.skills-layout:has(.skills-radar[hidden]) {
+  grid-template-columns: 1fr;
+}
+
+.skills-radar {
+  margin: 0;
+  width: 100%;
+  max-width: 340px;
+  justify-self: center;
+}
+
+.skills-radar:empty {
+  display: none;
+}
+
+.skills-radar svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.radar-grid,
+.radar-axis {
+  fill: none;
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.radar-shape {
+  fill: var(--accent);
+  fill-opacity: 0.18;
+  stroke: var(--accent-strong);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.radar-point {
+  fill: var(--accent-strong);
+}
+
+.radar-label {
+  fill: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+}
+
+.skills-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.5rem 2rem;
+}
+
+.skill-group__title {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--accent-strong);
+  margin-bottom: 0.9rem;
+}
+
+.skill-bars {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.skill-bar__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.4rem;
+}
+
+.skill-bar__name {
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.skill-bar__pct {
+  font-size: 0.85rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.skill-bar__track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.skill-bar__fill {
+  height: 100%;
+  width: var(--level);
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-strong));
+  animation: skillGrow 900ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes skillGrow {
+  from { width: 0; }
+  to { width: var(--level); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skill-bar__fill {
+    animation: none;
+  }
+}
+
+@media (max-width: 820px) {
+  .skills-layout {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+}
+
 .timeline {
   list-style: none;
   display: flex;

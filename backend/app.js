@@ -6,6 +6,7 @@ const cors = require('cors');
 // ── Route imports ──
 const authRoutes = require('./routes/auth');
 const projectRoutes = require('./routes/projects');
+const skillRoutes = require('./routes/skills');
 const achievementRoutes = require('./routes/achievements');
 const blogRoutes = require('./routes/blog');
 const contactRoutes = require('./routes/contact');
@@ -60,6 +61,7 @@ app.get('/api/timeline', (_req, res) => {
 // ── Mount routers ──
 app.use('/api/auth', authRoutes);
 app.use('/api/projects', projectRoutes);
+app.use('/api/skills', skillRoutes);
 app.use('/api/achievements', achievementRoutes);
 app.use('/api/blog', blogRoutes);
 app.use('/api/contact', contactRoutes);

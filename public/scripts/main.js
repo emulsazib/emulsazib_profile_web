@@ -1,6 +1,8 @@
 const body = document.body;
 const themeToggle = document.getElementById('theme-toggle');
 const projectsGrid = document.getElementById('projects-grid');
+const skillsGroups = document.getElementById('skills-groups');
+const skillsRadar = document.getElementById('skills-radar');
 const achievementsGrid = document.getElementById('achievements-grid');
 const timelineList = document.getElementById('timeline-list');
 const summaryHeadline = document.getElementById('summary-headline');
@@ -130,15 +132,17 @@ function wireNavigation() {
 
 async function hydrateFromApi() {
   try {
-    const [summary, projects, achievements, timeline] = await Promise.all([
+    const [summary, projects, skills, achievements, timeline] = await Promise.all([
       fetchJson('/api/summary'),
       fetchJson('/api/projects'),
+      fetchJson('/api/skills'),
       fetchJson('/api/achievements'),
       fetchJson('/api/timeline'),
     ]);
 
     renderSummary(summary);
     renderProjects(projects?.projects || []);
+    renderSkills(skills?.skills || []);
     renderAchievements(achievements?.achievements || []);
     renderTimeline(timeline?.timeline || []);
   } catch (error) {
@@ -170,6 +174,141 @@ function renderProjects(list) {
 
   projectsGrid.innerHTML = list.map(projectCard).join('');
   setupReadMore(projectsGrid);
+}
+
+// ── Skills: proficiency bars (grouped by category) + a radar chart ──
+function renderSkills(list) {
+  if (!skillsGroups) return;
+  if (!list.length) {
+    skillsGroups.innerHTML = '<p>No skills added yet. Check back soon.</p>';
+    if (skillsRadar) skillsRadar.innerHTML = '';
+    return;
+  }
+
+  // Group skills by category, preserving first-seen order.
+  const groups = [];
+  const seen = {};
+  list.forEach((s) => {
+    const cat = s.category || 'General';
+    if (!(cat in seen)) {
+      seen[cat] = groups.length;
+      groups.push({ category: cat, items: [] });
+    }
+    groups[seen[cat]].items.push(s);
+  });
+
+  skillsGroups.innerHTML = groups
+    .map(
+      (g) => `
+        <div class="skill-group">
+          <h4 class="skill-group__title">${g.category}</h4>
+          <ul class="skill-bars">
+            ${g.items
+              .map((s) => {
+                const lvl = clampLevel(s.level);
+                return `
+                  <li class="skill-bar">
+                    <div class="skill-bar__head">
+                      <span class="skill-bar__name">${s.name}</span>
+                      <span class="skill-bar__pct">${lvl}%</span>
+                    </div>
+                    <div class="skill-bar__track">
+                      <div class="skill-bar__fill" style="--level:${lvl}%"></div>
+                    </div>
+                  </li>`;
+              })
+              .join('')}
+          </ul>
+        </div>`,
+    )
+    .join('');
+
+  if (skillsRadar) {
+    const axes = radarAxes(list);
+    skillsRadar.innerHTML = buildRadarSvg(axes);
+    skillsRadar.hidden = axes.length < 3;
+  }
+}
+
+function clampLevel(v) {
+  const n = Number(v) || 0;
+  return Math.max(0, Math.min(100, Math.round(n)));
+}
+
+// Radar axes = one per category (value = average level). Falls back to
+// individual skills when there are too few categories, and yields nothing
+// when there aren't enough axes for a meaningful polygon (< 3).
+function radarAxes(skills) {
+  const byCat = {};
+  const order = [];
+  skills.forEach((s) => {
+    const cat = s.category || 'General';
+    if (!byCat[cat]) { byCat[cat] = []; order.push(cat); }
+    byCat[cat].push(clampLevel(s.level));
+  });
+
+  if (order.length >= 3) {
+    return order.map((cat) => {
+      const vals = byCat[cat];
+      const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+      return { label: cat, value: Math.round(avg) };
+    });
+  }
+  if (skills.length >= 3) {
+    return skills.slice(0, 8).map((s) => ({ label: s.name, value: clampLevel(s.level) }));
+  }
+  return [];
+}
+
+// Build a responsive, theme-aware SVG radar chart (single-series magnitude).
+function buildRadarSvg(axes) {
+  const n = axes.length;
+  if (n < 3) return '';
+
+  const cx = 160;
+  const cy = 135;
+  const R = 88;
+  const angle = (i) => (-90 + i * (360 / n)) * (Math.PI / 180);
+  const point = (i, r) => [cx + r * Math.cos(angle(i)), cy + r * Math.sin(angle(i))];
+  const fmt = (pair) => pair.map((v) => v.toFixed(1)).join(',');
+
+  const rings = [0.25, 0.5, 0.75, 1]
+    .map((frac) => {
+      const pts = axes.map((_, i) => fmt(point(i, R * frac))).join(' ');
+      return `<polygon class="radar-grid" points="${pts}" />`;
+    })
+    .join('');
+
+  const spokes = axes
+    .map((_, i) => {
+      const [x, y] = point(i, R);
+      return `<line class="radar-axis" x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" />`;
+    })
+    .join('');
+
+  const dataPts = axes.map((a, i) => fmt(point(i, R * (a.value / 100)))).join(' ');
+  const shape = `<polygon class="radar-shape" points="${dataPts}" />`;
+
+  const dots = axes
+    .map((a, i) => {
+      const [x, y] = point(i, R * (a.value / 100));
+      return `<circle class="radar-point" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.5" />`;
+    })
+    .join('');
+
+  const labels = axes
+    .map((a, i) => {
+      const [lx, ly] = point(i, R + 16);
+      const cos = Math.cos(angle(i));
+      let anchor = 'middle';
+      if (cos > 0.3) anchor = 'start';
+      else if (cos < -0.3) anchor = 'end';
+      const dy = ly < cy - R * 0.5 ? 0 : ly > cy + R * 0.5 ? 10 : 4;
+      return `<text class="radar-label" x="${lx.toFixed(1)}" y="${(ly + dy).toFixed(1)}" text-anchor="${anchor}">${a.label}</text>`;
+    })
+    .join('');
+
+  return `<svg viewBox="0 0 320 270" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Radar chart of average skill proficiency by category">${rings}${spokes}${shape}${dots}${labels}</svg>`;
 }
 
 function renderAchievements(list) {
@@ -272,6 +411,7 @@ function renderTimeline(list) {
 function renderErrorState() {
   const message = '<p class="form-status">Unable to load data from the server. Please refresh.</p>';
   if (projectsGrid) projectsGrid.innerHTML = message;
+  if (skillsGroups) skillsGroups.innerHTML = message;
   if (achievementsGrid) achievementsGrid.innerHTML = message;
   if (timelineList) timelineList.innerHTML = message;
 }
