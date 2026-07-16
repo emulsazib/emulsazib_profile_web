@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "docsDir": "memory-bank",
+  "files": [
+    "prd",
+    "architecture",
+    "design",
+    "phase",
+    "rules",
+    "memory"
+  ],
+  "sessionTtlMinutes": 120
+}
