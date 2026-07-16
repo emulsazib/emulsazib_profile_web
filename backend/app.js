@@ -13,7 +13,7 @@ const contactRoutes = require('./routes/contact');
 const pageRoutes = require('./routes/pages');
 
 // ── Static data imports ──
-const { professionalSummary, timeline } = require('./data/staticData');
+const { professionalSummary, experience, timeline } = require('./data/staticData');
 const { runMigrations } = require('./db/migrate');
 
 const app = express();
@@ -52,6 +52,10 @@ app.use('/api', (req, res, next) => {
 // ── Static data API routes ──
 app.get('/api/summary', (_req, res) => {
   res.json(professionalSummary);
+});
+
+app.get('/api/experience', (_req, res) => {
+  res.json({ experience });
 });
 
 app.get('/api/timeline', (_req, res) => {

@@ -4,6 +4,7 @@ const projectsGrid = document.getElementById('projects-grid');
 const skillsGroups = document.getElementById('skills-groups');
 const skillsRadar = document.getElementById('skills-radar');
 const achievementsGrid = document.getElementById('achievements-grid');
+const experienceList = document.getElementById('experience-list');
 const timelineList = document.getElementById('timeline-list');
 const summaryHeadline = document.getElementById('summary-headline');
 const summaryBlurb = document.getElementById('summary-blurb');
@@ -132,11 +133,12 @@ function wireNavigation() {
 
 async function hydrateFromApi() {
   try {
-    const [summary, projects, skills, achievements, timeline] = await Promise.all([
+    const [summary, projects, skills, achievements, experience, timeline] = await Promise.all([
       fetchJson('/api/summary'),
       fetchJson('/api/projects'),
       fetchJson('/api/skills'),
       fetchJson('/api/achievements'),
+      fetchJson('/api/experience'),
       fetchJson('/api/timeline'),
     ]);
 
@@ -144,6 +146,7 @@ async function hydrateFromApi() {
     renderProjects(projects?.projects || []);
     renderSkills(skills?.skills || []);
     renderAchievements(achievements?.achievements || []);
+    renderExperience(experience?.experience || []);
     renderTimeline(timeline?.timeline || []);
   } catch (error) {
     console.error('Failed to load API data', error);
@@ -389,6 +392,61 @@ function setupReadMore(container) {
   });
 }
 
+function renderExperience(list) {
+  if (!experienceList) return;
+  if (!list.length) {
+    experienceList.innerHTML = '<p>Work experience coming soon.</p>';
+    return;
+  }
+
+  experienceList.innerHTML = list.map(experienceItem).join('');
+}
+
+function experienceItem({
+  role,
+  company,
+  companyUrl,
+  type,
+  location,
+  start,
+  end,
+  current,
+  summary,
+  highlights = [],
+  stack = [],
+}) {
+  const period = [start, end].filter(Boolean).join(' – ');
+  const companyName = companyUrl
+    ? `<a href="${companyUrl}" target="_blank" rel="noreferrer">${company}</a>`
+    : company;
+
+  const meta = [
+    type ? `<span class="exp-item__type">${type}</span>` : '',
+    location ? `<span class="exp-item__location">${location}</span>` : '',
+  ]
+    .filter(Boolean)
+    .join('');
+
+  return `
+    <article class="exp-item${current ? ' exp-item--current' : ''}">
+      <div class="exp-item__marker" aria-hidden="true"></div>
+      <div class="exp-item__body">
+        <div class="exp-item__head">
+          <div>
+            <h3 class="exp-item__role">${role}</h3>
+            <p class="exp-item__company">${companyName}${current ? '<span class="exp-item__badge">Current</span>' : ''}</p>
+          </div>
+          ${period ? `<time class="exp-item__period">${period}</time>` : ''}
+        </div>
+        ${meta ? `<div class="exp-item__meta">${meta}</div>` : ''}
+        ${summary ? `<p class="exp-item__summary">${summary}</p>` : ''}
+        ${highlights.length ? `<ul class="exp-item__highlights">${highlights.map((h) => `<li>${h}</li>`).join('')}</ul>` : ''}
+        ${stack.length ? `<ul class="card__tags exp-item__stack">${stack.map((t) => `<li>${t}</li>`).join('')}</ul>` : ''}
+      </div>
+    </article>
+  `;
+}
+
 function renderTimeline(list) {
   if (!timelineList) return;
   if (!list.length) {
@@ -413,6 +471,7 @@ function renderErrorState() {
   if (projectsGrid) projectsGrid.innerHTML = message;
   if (skillsGroups) skillsGroups.innerHTML = message;
   if (achievementsGrid) achievementsGrid.innerHTML = message;
+  if (experienceList) experienceList.innerHTML = message;
   if (timelineList) timelineList.innerHTML = message;
 }
 
