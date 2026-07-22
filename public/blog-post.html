@@ -11,6 +11,8 @@
     href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap"
     rel="stylesheet">
   <link rel="stylesheet" href="/styles/main.css" />
+  <!-- DOMPurify sanitizes rich-HTML post bodies before rendering -->
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
   <title id="blog-title">Blog Post - Portfolio</title>
   <script>
     window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };
@@ -54,6 +56,7 @@
     <article class="panel">
       <a href="/blog" class="back-link">← Back to Blog</a>
       <div class="blog-post" id="blog-post-content">
+        <img class="blog-post__featured" id="blog-featured-image" alt="" hidden />
         <div class="blog-post__meta">
           <time id="blog-date"></time>
           <span id="blog-author"></span>

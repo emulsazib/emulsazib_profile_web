@@ -1,26 +1,35 @@
 const express = require('express');
 const BlogPost = require('../models/BlogPost');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, optionalAuth } = require('../middleware/auth');
 
 const router = express.Router();
 
-// ── Public ──
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// ── Public (with optional auth) ──
 
 // GET /api/blog
-router.get('/', async (_req, res) => {
+// Anonymous callers see published posts only. An authenticated admin (valid
+// Bearer token) additionally sees drafts, so the dashboard lists everything.
+router.get('/', optionalAuth, async (req, res) => {
   try {
-    const posts = await BlogPost.findAll();
+    const posts = await BlogPost.findAll({ includeDrafts: !!req.admin });
     res.json({ posts });
   } catch (err) {
     res.status(500).json({ status: 'error', message: 'Failed to load blog posts.' });
   }
 });
 
-// GET /api/blog/:id
-router.get('/:id', async (req, res) => {
+// GET /api/blog/:idOrSlug
+// Accepts either a UUID or a slug. Draft posts are only returned to an
+// authenticated admin (enables draft preview); anonymous callers get a 404.
+router.get('/:idOrSlug', optionalAuth, async (req, res) => {
   try {
-    const post = await BlogPost.findById(req.params.id);
-    if (!post) {
+    const key = req.params.idOrSlug;
+    const post = UUID_RE.test(key)
+      ? await BlogPost.findById(key)
+      : await BlogPost.findBySlug(key);
+    if (!post || (post.status !== 'published' && !req.admin)) {
       return res.status(404).json({ status: 'error', message: 'Blog post not found.' });
     }
     res.json(post);

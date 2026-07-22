@@ -12,6 +12,11 @@
     rel="stylesheet">
   <link rel="stylesheet" href="/styles/main.css" />
   <link rel="stylesheet" href="/styles/admin.css" />
+  <!-- Quill rich-text editor (WordPress-style WYSIWYG) via CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
+  <!-- DOMPurify sanitizes editor HTML before it is stored / rendered -->
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
   <title>Admin Panel - Portfolio</title>
   <script>
     window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };
@@ -174,6 +179,162 @@
     </section>
   </main>
 
+  <!-- ── WordPress-style Blog Editor (full-screen, hidden by default) ── -->
+  <div class="blog-editor" id="blog-editor" hidden>
+    <div class="blog-editor__topbar">
+      <div class="blog-editor__topbar-left">
+        <button type="button" class="secondary-btn" id="editor-back">← Back</button>
+        <span class="blog-editor__title-label" id="editor-heading">New Post</span>
+        <span class="status-pill" id="editor-status-pill" data-status="draft">Draft</span>
+      </div>
+      <div class="blog-editor__topbar-actions">
+        <button type="button" class="secondary-btn" id="editor-preview">Preview</button>
+        <button type="button" class="secondary-btn" id="editor-save-draft">Save Draft</button>
+        <button type="button" class="primary-btn" id="editor-publish">Publish</button>
+      </div>
+    </div>
+
+    <div class="blog-editor__layout">
+      <!-- Main editing panel -->
+      <div class="blog-editor__main">
+        <input type="text" class="blog-editor__title-input" id="editor-title"
+               placeholder="Add title" autocomplete="off" />
+
+        <label class="permalink-field">
+          <span class="permalink-field__label">Permalink</span>
+          <span class="permalink-field__prefix">/blog-post?slug=</span>
+          <input type="text" id="editor-slug" placeholder="auto-generated-from-title" autocomplete="off" />
+        </label>
+
+        <div class="blog-editor__excerpt">
+          <label>
+            Excerpt
+            <textarea id="editor-excerpt" rows="2"
+                      placeholder="A short summary shown in the blog list…"></textarea>
+          </label>
+        </div>
+
+        <div class="blog-editor__quill-wrap">
+          <div id="quill-editor"></div>
+        </div>
+      </div>
+
+      <!-- Settings sidebar -->
+      <aside class="blog-editor__sidebar">
+        <!-- SEO score card -->
+        <section class="sidebar-card">
+          <h3 class="sidebar-card__title">SEO Analysis</h3>
+          <div class="seo-score">
+            <div class="seo-score__ring" id="seo-ring">
+              <span class="seo-score__value" id="seo-score-value">0</span>
+            </div>
+            <div class="seo-score__meta">
+              <strong id="seo-score-label">Not analyzed</strong>
+              <span class="hint" id="seo-wordcount">0 words</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Focus keyword + meta -->
+        <section class="sidebar-card">
+          <h3 class="sidebar-card__title">Search Appearance</h3>
+          <label class="sidebar-field">
+            Focus Keyword
+            <input type="text" id="editor-focus-keyword" placeholder="e.g. express portfolio" />
+            <span class="hint">The main phrase you want this post to rank for.</span>
+          </label>
+          <label class="sidebar-field">
+            Meta Title
+            <input type="text" id="editor-meta-title" placeholder="Defaults to the post title" />
+            <div class="char-meter" data-min="50" data-max="60">
+              <div class="char-meter__bar"><div class="char-meter__fill" id="meta-title-fill"></div></div>
+              <span class="char-meter__count" id="meta-title-count">0 / 60</span>
+            </div>
+          </label>
+          <label class="sidebar-field">
+            Meta Description
+            <textarea id="editor-meta-description" rows="3"
+                      placeholder="150–160 characters that summarize the post for search results…"></textarea>
+            <div class="char-meter" data-min="120" data-max="160">
+              <div class="char-meter__bar"><div class="char-meter__fill" id="meta-desc-fill"></div></div>
+              <span class="char-meter__count" id="meta-desc-count">0 / 160</span>
+            </div>
+          </label>
+        </section>
+
+        <!-- SEO checklist -->
+        <section class="sidebar-card">
+          <h3 class="sidebar-card__title">SEO Checks</h3>
+          <ul class="seo-checklist" id="seo-checklist"></ul>
+        </section>
+
+        <!-- Readability -->
+        <section class="sidebar-card">
+          <h3 class="sidebar-card__title">Readability</h3>
+          <ul class="seo-checklist" id="readability-checklist"></ul>
+        </section>
+
+        <!-- Featured image -->
+        <section class="sidebar-card">
+          <h3 class="sidebar-card__title">Featured Image</h3>
+          <div class="featured-image" id="featured-image">
+            <input type="hidden" id="editor-featured-image" value="" />
+            <input type="file" class="featured-image__file" id="featured-image-file" accept="image/*" />
+            <div class="featured-image__preview" id="featured-image-preview" hidden>
+              <img src="" alt="Featured preview" />
+              <button type="button" class="secondary-btn" id="featured-image-remove">Remove</button>
+            </div>
+            <label class="featured-image__drop" id="featured-image-drop" for="featured-image-file">
+              Click or drag an image here
+            </label>
+          </div>
+        </section>
+
+        <!-- Taxonomy -->
+        <section class="sidebar-card">
+          <h3 class="sidebar-card__title">Organization</h3>
+          <label class="sidebar-field">
+            Author
+            <input type="text" id="editor-author" placeholder="Author name" />
+          </label>
+          <label class="sidebar-field">
+            Date
+            <input type="text" id="editor-date" placeholder="e.g. January 15, 2025" />
+          </label>
+          <label class="sidebar-field">
+            Categories
+            <input type="text" id="editor-categories" placeholder="Comma-separated (e.g. Tutorials, Web Dev)" />
+          </label>
+          <label class="sidebar-field">
+            Tags
+            <input type="text" id="editor-tags" placeholder="Comma-separated (e.g. JavaScript, SEO)" />
+          </label>
+        </section>
+      </aside>
+    </div>
+  </div>
+
+  <!-- Preview overlay -->
+  <div class="preview-overlay" id="preview-overlay" hidden>
+    <div class="preview-overlay__bar">
+      <span>Preview</span>
+      <button type="button" class="secondary-btn" id="preview-close">Close</button>
+    </div>
+    <div class="preview-overlay__scroll">
+      <article class="panel preview-article">
+        <div class="blog-post">
+          <img class="blog-post__featured" id="preview-featured" alt="" hidden />
+          <div class="blog-post__meta">
+            <time id="preview-date"></time>
+            <span id="preview-author"></span>
+          </div>
+          <h1 id="preview-title"></h1>
+          <div class="blog-post__body" id="preview-body"></div>
+        </div>
+      </article>
+    </div>
+  </div>
+
   <!-- Modal -->
   <div class="modal-backdrop" id="modal-backdrop" hidden>
     <div class="modal" id="modal">
@@ -216,6 +377,7 @@
     </div>
   </footer>
 
+  <script src="/scripts/seo-analyzer.js"></script>
   <script src="/scripts/admin.js"></script>
 </body>
 
