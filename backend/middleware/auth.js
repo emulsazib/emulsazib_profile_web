@@ -15,4 +15,19 @@ function requireAuth(req, res, next) {
   }
 }
 
-module.exports = { requireAuth, JWT_SECRET };
+// Non-throwing variant: attaches req.admin when a valid Bearer token is present,
+// but never blocks the request. Lets public endpoints reveal extra data (e.g.
+// draft posts) to authenticated admins while staying open to everyone else.
+function optionalAuth(req, _res, next) {
+  const auth = req.headers.authorization;
+  if (auth && auth.startsWith('Bearer ')) {
+    try {
+      req.admin = jwt.verify(auth.split(' ')[1], JWT_SECRET);
+    } catch {
+      // Invalid/expired token — treat as anonymous rather than erroring.
+    }
+  }
+  next();
+}
+
+module.exports = { requireAuth, optionalAuth, JWT_SECRET };

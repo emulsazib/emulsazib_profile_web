@@ -546,7 +546,8 @@
     if (editBtn) {
       const type = editBtn.dataset.type;
       const id = editBtn.dataset.id;
-      openModal(type, id);
+      if (type === 'blog') openBlogEditor(id);
+      else openModal(type, id);
       return;
     }
 
@@ -563,7 +564,7 @@
   $('#btn-add-project').addEventListener('click', () => openModal('project'));
   $('#btn-add-skill').addEventListener('click', () => openModal('skill'));
   $('#btn-add-achievement').addEventListener('click', () => openModal('achievement'));
-  $('#btn-add-blog').addEventListener('click', () => openModal('blog'));
+  $('#btn-add-blog').addEventListener('click', () => openBlogEditor());
 
   // ── Modal events ──
   modalClose.addEventListener('click', closeModal);
@@ -596,6 +597,449 @@
     if (s === 'blog') return 'Blog Post';
     return s.charAt(0).toUpperCase() + s.slice(1);
   }
+
+  /* ══════════════════════════════════════════════════════════════════════
+   *  WordPress-style Blog Editor
+   *  A dedicated full-screen view (not the generic modal) with a Quill
+   *  WYSIWYG main panel + settings sidebar and a real-time SEO analyzer.
+   * ════════════════════════════════════════════════════════════════════ */
+
+  const editorEl = $('#blog-editor');
+  const mainEl = document.querySelector('main');
+  const editor = { quill: null, editingId: null, status: 'draft', seoTimer: null, lastScore: 0 };
+
+  // Register Quill format extensions once so alt text and link target/rel
+  // attributes survive serialization.
+  function registerQuillFormats() {
+    if (registerQuillFormats._done || typeof Quill === 'undefined') return;
+    registerQuillFormats._done = true;
+
+    const Link = Quill.import('formats/link');
+    class CustomLink extends Link {
+      static create(value) {
+        const href = typeof value === 'string' ? value : value.href;
+        const node = super.create(href);
+        if (value && typeof value === 'object') {
+          if (value.target) node.setAttribute('target', value.target);
+          else node.removeAttribute('target');
+          if (value.rel) node.setAttribute('rel', value.rel);
+          else node.removeAttribute('rel');
+        }
+        return node;
+      }
+      static formats(node) {
+        return {
+          href: node.getAttribute('href'),
+          target: node.getAttribute('target') || '',
+          rel: node.getAttribute('rel') || '',
+        };
+      }
+    }
+    Quill.register(CustomLink, true);
+
+    const Image = Quill.import('formats/image');
+    class CustomImage extends Image {
+      static create(value) {
+        const src = typeof value === 'string' ? value : value.src;
+        const node = super.create(src);
+        if (value && typeof value === 'object' && value.alt) node.setAttribute('alt', value.alt);
+        return node;
+      }
+      static value(node) {
+        return { src: node.getAttribute('src'), alt: node.getAttribute('alt') || '' };
+      }
+    }
+    Quill.register(CustomImage, true);
+  }
+
+  function initQuill() {
+    if (editor.quill) return editor.quill;
+    registerQuillFormats();
+
+    editor.quill = new Quill('#quill-editor', {
+      theme: 'snow',
+      placeholder: 'Start writing your post…',
+      modules: {
+        toolbar: {
+          container: [
+            [{ header: [1, 2, 3, 4, 5, 6, false] }],
+            ['bold', 'italic', 'underline', 'strike'],
+            ['blockquote', 'code-block'],
+            [{ list: 'ordered' }, { list: 'bullet' }],
+            ['link', 'image'],
+            ['clean'],
+          ],
+          handlers: {
+            image: imageHandler,
+            link: linkHandler,
+          },
+        },
+      },
+    });
+
+    // Drag-and-drop images onto the editor surface.
+    const root = editor.quill.root;
+    root.addEventListener('dragover', (e) => { e.preventDefault(); root.classList.add('is-dragover'); });
+    root.addEventListener('dragleave', () => root.classList.remove('is-dragover'));
+    root.addEventListener('drop', async (e) => {
+      root.classList.remove('is-dragover');
+      const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if (!file || !file.type.startsWith('image/')) return;
+      e.preventDefault();
+      await insertImageFile(file);
+    });
+
+    editor.quill.on('text-change', scheduleSeo);
+    return editor.quill;
+  }
+
+  // Custom image toolbar handler → pick file, resize, prompt alt, insert.
+  function imageHandler() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async () => {
+      const file = input.files && input.files[0];
+      if (file) await insertImageFile(file);
+    };
+    input.click();
+  }
+
+  async function insertImageFile(file) {
+    try {
+      const dataUrl = await fileToResizedDataUrl(file);
+      const alt = (window.prompt('Image alt text (important for SEO & accessibility):', '') || '').trim();
+      const range = editor.quill.getSelection(true) || { index: editor.quill.getLength() };
+      editor.quill.insertEmbed(range.index, 'image', { src: dataUrl, alt }, 'user');
+      editor.quill.setSelection(range.index + 1, 0);
+      scheduleSeo();
+    } catch (err) {
+      showToast(err.message || 'Failed to process image', true);
+    }
+  }
+
+  // Custom link handler with target/nofollow toggles.
+  let linkDialog = null;
+  function buildLinkDialog() {
+    if (linkDialog) return linkDialog;
+    const el = document.createElement('div');
+    el.className = 'link-dialog';
+    el.hidden = true;
+    el.innerHTML = `
+      <div class="link-dialog__box">
+        <h4>Insert Link</h4>
+        <label>URL<input type="url" class="link-dialog__url" placeholder="https://example.com" /></label>
+        <label class="link-dialog__check"><input type="checkbox" class="link-dialog__blank" /> Open in new tab (target="_blank")</label>
+        <label class="link-dialog__check"><input type="checkbox" class="link-dialog__nofollow" /> Add rel="nofollow"</label>
+        <div class="link-dialog__actions">
+          <button type="button" class="secondary-btn link-dialog__cancel">Cancel</button>
+          <button type="button" class="primary-btn link-dialog__apply">Apply</button>
+        </div>
+      </div>`;
+    document.body.appendChild(el);
+    linkDialog = el;
+    return el;
+  }
+
+  function linkHandler() {
+    const range = editor.quill.getSelection(true);
+    if (!range) return;
+    const dlg = buildLinkDialog();
+    const urlInput = dlg.querySelector('.link-dialog__url');
+    const blankInput = dlg.querySelector('.link-dialog__blank');
+    const nofollowInput = dlg.querySelector('.link-dialog__nofollow');
+
+    // Prefill from existing link at the cursor.
+    const existing = editor.quill.getFormat(range).link;
+    urlInput.value = existing && existing.href ? existing.href : (existing || '');
+    blankInput.checked = !!(existing && existing.target === '_blank');
+    nofollowInput.checked = !!(existing && (existing.rel || '').includes('nofollow'));
+
+    dlg.hidden = false;
+    setTimeout(() => urlInput.focus(), 30);
+
+    const close = () => { dlg.hidden = true; cleanup(); };
+    const apply = () => {
+      const url = urlInput.value.trim();
+      if (!url) { editor.quill.format('link', false); close(); return; }
+      const value = {
+        href: url,
+        target: blankInput.checked ? '_blank' : '',
+        rel: nofollowInput.checked ? 'nofollow' : '',
+      };
+      editor.quill.setSelection(range.index, range.length);
+      if (range.length === 0) {
+        editor.quill.insertText(range.index, url, 'link', value, 'user');
+      } else {
+        editor.quill.format('link', value, 'user');
+      }
+      scheduleSeo();
+      close();
+    };
+    const onKey = (e) => { if (e.key === 'Escape') close(); if (e.key === 'Enter' && e.target === urlInput) { e.preventDefault(); apply(); } };
+    function cleanup() {
+      dlg.querySelector('.link-dialog__apply').removeEventListener('click', apply);
+      dlg.querySelector('.link-dialog__cancel').removeEventListener('click', close);
+      dlg.removeEventListener('keydown', onKey);
+    }
+    dlg.querySelector('.link-dialog__apply').addEventListener('click', apply);
+    dlg.querySelector('.link-dialog__cancel').addEventListener('click', close);
+    dlg.addEventListener('keydown', onKey);
+  }
+
+  // ── Open / close the editor view ──
+  async function openBlogEditor(id = null) {
+    initQuill();
+    editor.editingId = id;
+
+    let data = { author: 'Emul Sajib', status: 'draft', contentFormat: 'html' };
+    if (id) {
+      const cached = state.blog.find((b) => b._id === id) || {};
+      if (cached.content != null) {
+        data = cached;
+      } else {
+        try {
+          data = await fetchJSON(`${API.blog}/${id}`);
+          const idx = state.blog.findIndex((b) => b._id === id);
+          if (idx !== -1) Object.assign(state.blog[idx], data);
+        } catch {
+          showToast('Failed to load full blog post', true);
+          return;
+        }
+      }
+    }
+
+    // Populate fields.
+    $('#editor-heading').textContent = id ? 'Edit Post' : 'New Post';
+    $('#editor-title').value = data.title || '';
+    $('#editor-slug').value = data.slug || '';
+    $('#editor-excerpt').value = data.excerpt || '';
+    $('#editor-author').value = data.author || 'Emul Sajib';
+    $('#editor-date').value = data.date || '';
+    $('#editor-categories').value = (data.categories || []).join(', ');
+    $('#editor-tags').value = (data.tags || []).join(', ');
+    $('#editor-focus-keyword').value = data.focusKeyword || '';
+    $('#editor-meta-title').value = data.metaTitle || '';
+    $('#editor-meta-description').value = data.metaDescription || '';
+    setFeaturedImage(data.featuredImage || '');
+    editor.status = data.status === 'published' ? 'published' : 'draft';
+    updateStatusPill();
+
+    // Load content into Quill.
+    editor.quill.setText('');
+    if (data.content) {
+      if (data.contentFormat === 'html') {
+        editor.quill.clipboard.dangerouslyPasteHTML(DOMPurify.sanitize(data.content));
+      } else {
+        // Legacy markdown-ish post: drop in as plain text for reformatting.
+        editor.quill.setText(data.content);
+      }
+    }
+
+    mainEl.hidden = true;
+    editorEl.hidden = false;
+    window.scrollTo(0, 0);
+    runSeo();
+    setTimeout(() => $('#editor-title').focus(), 50);
+  }
+
+  function closeBlogEditor() {
+    editorEl.hidden = true;
+    mainEl.hidden = false;
+    editor.editingId = null;
+  }
+
+  function updateStatusPill() {
+    const pill = $('#editor-status-pill');
+    pill.dataset.status = editor.status;
+    pill.textContent = editor.status === 'published' ? 'Published' : 'Draft';
+  }
+
+  // ── Featured image ──
+  function setFeaturedImage(url) {
+    $('#editor-featured-image').value = url || '';
+    const preview = $('#featured-image-preview');
+    const drop = $('#featured-image-drop');
+    if (url) {
+      preview.querySelector('img').src = url;
+      preview.hidden = false;
+      drop.hidden = true;
+    } else {
+      preview.hidden = true;
+      drop.hidden = false;
+    }
+  }
+
+  async function handleFeaturedFile(file) {
+    if (!file || !file.type.startsWith('image/')) return;
+    try {
+      const dataUrl = await fileToResizedDataUrl(file, 1400, 0.85);
+      setFeaturedImage(dataUrl);
+    } catch (err) {
+      showToast(err.message || 'Failed to process image', true);
+    }
+  }
+
+  $('#featured-image-file').addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (file) handleFeaturedFile(file);
+  });
+  $('#featured-image-remove').addEventListener('click', () => setFeaturedImage(''));
+  const fiDrop = $('#featured-image-drop');
+  fiDrop.addEventListener('dragover', (e) => { e.preventDefault(); fiDrop.classList.add('is-dragover'); });
+  fiDrop.addEventListener('dragleave', () => fiDrop.classList.remove('is-dragover'));
+  fiDrop.addEventListener('drop', (e) => {
+    e.preventDefault();
+    fiDrop.classList.remove('is-dragover');
+    const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (file) handleFeaturedFile(file);
+  });
+
+  // ── Real-time SEO analysis ──
+  function collectSeoInput() {
+    const titleVal = $('#editor-title').value;
+    return {
+      focusKeyword: $('#editor-focus-keyword').value,
+      title: titleVal,
+      metaTitle: $('#editor-meta-title').value || titleVal,
+      metaDescription: $('#editor-meta-description').value,
+      slug: $('#editor-slug').value,
+      excerpt: $('#editor-excerpt').value,
+      contentHtml: editor.quill ? editor.quill.root.innerHTML : '',
+    };
+  }
+
+  function scheduleSeo() {
+    clearTimeout(editor.seoTimer);
+    editor.seoTimer = setTimeout(runSeo, 350);
+  }
+
+  function runSeo() {
+    if (typeof SEOAnalyzer === 'undefined') return;
+    const result = SEOAnalyzer.analyze(collectSeoInput());
+    editor.lastScore = result.score;
+
+    // Score ring.
+    const ring = $('#seo-ring');
+    const band = result.score >= 70 ? 'good' : result.score >= 45 ? 'ok' : 'bad';
+    ring.dataset.band = band;
+    ring.style.setProperty('--pct', result.score);
+    $('#seo-score-value').textContent = result.score;
+    $('#seo-score-label').textContent =
+      band === 'good' ? 'Good' : band === 'ok' ? 'Needs work' : 'Poor';
+    $('#seo-wordcount').textContent = `${result.wordCount} words`;
+
+    renderChecklist($('#seo-checklist'), result.checks);
+    renderChecklist($('#readability-checklist'), result.readability.checks);
+    updateCharMeter('#meta-title-fill', '#meta-title-count', result.meta.titleLength, 60);
+    updateCharMeter('#meta-desc-fill', '#meta-desc-count', result.meta.descriptionLength, 160);
+  }
+
+  function renderChecklist(ul, checks) {
+    ul.innerHTML = checks.map((c) => `
+      <li class="seo-check seo-check--${c.status}">
+        <span class="seo-check__dot"></span>
+        <span class="seo-check__text"><strong>${esc(c.label)}:</strong> ${esc(c.text)}</span>
+      </li>
+    `).join('');
+  }
+
+  function updateCharMeter(fillSel, countSel, len, max) {
+    const fill = $(fillSel);
+    const count = $(countSel);
+    const wrap = fill.closest('.char-meter');
+    const min = Number(wrap.dataset.min) || 0;
+    const hardMax = Number(wrap.dataset.max) || max;
+    fill.style.width = `${Math.min(100, (len / hardMax) * 100)}%`;
+    let band = 'bad';
+    if (len === 0) band = 'empty';
+    else if (len < min) band = 'ok';
+    else if (len <= hardMax) band = 'good';
+    else band = 'bad';
+    wrap.dataset.band = band;
+    count.textContent = `${len} / ${hardMax}`;
+  }
+
+  // ── Save ──
+  function parseCsv(sel) {
+    const val = $(sel).value || '';
+    return val.split(',').map((s) => s.trim()).filter(Boolean);
+  }
+
+  async function saveBlog(status) {
+    const title = $('#editor-title').value.trim();
+    if (!title) { showToast('Title is required', true); $('#editor-title').focus(); return; }
+
+    const rawHtml = editor.quill.root.innerHTML;
+    const content = DOMPurify.sanitize(rawHtml, { ADD_ATTR: ['target', 'rel'] });
+    const excerpt = $('#editor-excerpt').value.trim()
+      || (editor.quill.getText().trim().slice(0, 160));
+
+    const payload = {
+      title,
+      slug: $('#editor-slug').value.trim(),
+      excerpt,
+      content,
+      contentFormat: 'html',
+      author: $('#editor-author').value.trim() || 'Emul Sajib',
+      date: $('#editor-date').value.trim(),
+      tags: parseCsv('#editor-tags'),
+      categories: parseCsv('#editor-categories'),
+      featuredImage: $('#editor-featured-image').value,
+      metaTitle: $('#editor-meta-title').value.trim(),
+      metaDescription: $('#editor-meta-description').value.trim(),
+      focusKeyword: $('#editor-focus-keyword').value.trim(),
+      status,
+      seoScore: editor.lastScore,
+    };
+
+    const id = editor.editingId;
+    const url = id ? `${API.blog}/${id}` : API.blog;
+    const method = id ? 'PUT' : 'POST';
+    try {
+      const result = await fetchJSON(url, { method, body: JSON.stringify(payload) });
+      if (id) {
+        const idx = state.blog.findIndex((b) => b._id === id);
+        if (idx !== -1) state.blog[idx] = result;
+      } else {
+        state.blog.push(result);
+        editor.editingId = result._id;
+      }
+      editor.status = status;
+      $('#editor-heading').textContent = 'Edit Post';
+      updateStatusPill();
+      updateStats();
+      renderBlog();
+      showToast(status === 'published' ? 'Post published!' : 'Draft saved.');
+    } catch (err) {
+      showToast(err.message, true);
+    }
+  }
+
+  // ── Preview overlay ──
+  function openPreview() {
+    const overlay = $('#preview-overlay');
+    $('#preview-title').textContent = $('#editor-title').value || 'Untitled';
+    $('#preview-date').textContent = $('#editor-date').value || '';
+    $('#preview-author').textContent = $('#editor-author').value || '';
+    const featured = $('#editor-featured-image').value;
+    const fimg = $('#preview-featured');
+    if (featured) { fimg.src = featured; fimg.hidden = false; } else { fimg.hidden = true; }
+    $('#preview-body').innerHTML = DOMPurify.sanitize(editor.quill.root.innerHTML, { ADD_ATTR: ['target', 'rel'] });
+    overlay.hidden = false;
+  }
+
+  // ── Editor event wiring ──
+  $('#editor-back').addEventListener('click', closeBlogEditor);
+  $('#editor-save-draft').addEventListener('click', () => saveBlog('draft'));
+  $('#editor-publish').addEventListener('click', () => saveBlog('published'));
+  $('#editor-preview').addEventListener('click', openPreview);
+  $('#preview-close').addEventListener('click', () => { $('#preview-overlay').hidden = true; });
+
+  ['#editor-title', '#editor-slug', '#editor-excerpt', '#editor-focus-keyword',
+   '#editor-meta-title', '#editor-meta-description'].forEach((sel) => {
+    $(sel).addEventListener('input', scheduleSeo);
+  });
 
   // ── Init ──
   loadAll();

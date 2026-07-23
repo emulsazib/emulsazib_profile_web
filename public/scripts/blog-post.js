@@ -3,18 +3,20 @@ const blogPostBody = document.getElementById('blog-post-body');
 const blogDate = document.getElementById('blog-date');
 const blogAuthor = document.getElementById('blog-author');
 const blogTitleMeta = document.getElementById('blog-title');
+const blogFeatured = document.getElementById('blog-featured-image');
 
 async function loadBlogPost() {
   const urlParams = new URLSearchParams(window.location.search);
-  const postId = urlParams.get('id');
+  // Accept either ?slug=… (preferred) or the legacy ?id=<uuid>.
+  const postKey = urlParams.get('slug') || urlParams.get('id');
 
-  if (!postId) {
+  if (!postKey) {
     window.location.href = '/blog';
     return;
   }
 
   try {
-    const response = await fetch(`/api/blog/${postId}`);
+    const response = await fetch(`/api/blog/${encodeURIComponent(postKey)}`);
     if (!response.ok) {
       throw new Error('Post not found');
     }
@@ -26,14 +28,44 @@ async function loadBlogPost() {
   }
 }
 
+// Set the document <title> and meta description for SEO.
+function applyMeta(post) {
+  const pageTitle = post.metaTitle || post.title;
+  blogTitleMeta.textContent = `${pageTitle} - Blog`;
+
+  const description = post.metaDescription || post.excerpt || '';
+  let metaEl = document.querySelector('meta[name="description"]');
+  if (!metaEl) {
+    metaEl = document.createElement('meta');
+    metaEl.setAttribute('name', 'description');
+    document.head.appendChild(metaEl);
+  }
+  if (description) metaEl.setAttribute('content', description);
+}
+
 function renderBlogPost(post) {
-  blogTitleMeta.textContent = `${post.title} - Blog`;
+  applyMeta(post);
   blogPostTitle.textContent = post.title;
-  blogDate.textContent = post.date;
-  blogAuthor.textContent = post.author;
-  
-  // Render markdown-like content
-  blogPostBody.innerHTML = formatBlogContent(post.content);
+  blogDate.textContent = post.date || '';
+  blogAuthor.textContent = post.author || '';
+
+  if (post.featuredImage) {
+    blogFeatured.src = post.featuredImage;
+    blogFeatured.alt = post.title || '';
+    blogFeatured.hidden = false;
+  }
+
+  // HTML posts (from the WordPress-style editor) render sanitized HTML directly;
+  // legacy Markdown-ish posts fall back to the client-side formatter.
+  const looksLikeHtml = /<\/?[a-z][\s\S]*>/i.test(post.content || '');
+  if (post.contentFormat === 'html' || (post.contentFormat == null && looksLikeHtml)) {
+    const clean = (typeof DOMPurify !== 'undefined')
+      ? DOMPurify.sanitize(post.content, { ADD_ATTR: ['target', 'rel'] })
+      : post.content;
+    blogPostBody.innerHTML = clean;
+  } else {
+    blogPostBody.innerHTML = formatBlogContent(post.content);
+  }
 }
 
 function formatBlogContent(content) {
